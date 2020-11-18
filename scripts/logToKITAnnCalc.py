@@ -27,4 +27,8 @@ with open(args.outputFile, 'w') as f:
     for l in zip(x,y):
         f.write(str(l[0])+' '+str(l[1])+'\n')
         
+exit()
         
+with open(args.outputFile+"calib.txt", 'w') as f:
+    for i in range(3600):
+        f.write(str(1./60.)+' 60\n')
