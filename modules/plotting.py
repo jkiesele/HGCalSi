@@ -27,19 +27,26 @@ class curvePlotter(object):
         if min_x is not None:
             x, y = x[x>min_x],y[x>min_x]
             
-        self.plt.plot(x,y, **kwargs)
+        self.plt.plot(-x,y, **kwargs)
         
-    def _createPlot(self):
-        self.plt.xlabel("U [V]")
+    def labelAxes(self):
+        self.plt.xlabel("-U [V]")
         if self.mode == "CV":
-            self.plt.ylabel("$1/C^2\ [1/F^2]$")
+            self.plt.ylabel("$1/C_p^2\ [1/F^2]$")
+        elif self.mode == "CVs":
+            self.plt.ylabel("$1/C_s^2\ [1/F^2]$")
         elif self.mode == "IV":
             plt.ylabel("I [A]")
-        self.plt.legend()
+        
+    def _createPlot(self,nolegend=False):
+        self.labelAxes()
+        if not nolegend:
+            self.plt.legend()
         
         
-    def savePlot(self, outfile):
-        self._createPlot()
+    def savePlot(self, outfile,nolegend=False):
+        self._createPlot(nolegend)
+        self.plt.tight_layout()
         self.plt.savefig(outfile)
         self.plt.close()
     
