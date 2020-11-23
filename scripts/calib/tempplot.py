@@ -28,7 +28,7 @@ def R2T_PTX_ITS90(Rlist,R0=1000):
 
 
 def calibADCCounts(counts):
-    #return counts
+    return counts
     return 2.7003882937222283e-06* counts**2 + 1.005*0.3770691962172657* counts + 4900.17006022754041 +160
 
 x,y,z = readTempLog(args.inputFile, calib=True)
@@ -39,17 +39,20 @@ x=x
 #x=x[x<2000]
 
 #
-plt.plot(x,y)
-plt.xlabel("t [min]")
+plt.plot(x,y,label="DS18b20")
+plt.xlabel("t [s]")
 plt.ylabel("T [deg C]")
 
-plt.twinx()
-plt.plot(x,calibADCCounts(z))
-plt.xlabel("t [min]")
+#plt.twinx()
+plt.plot(x,calibADCCounts(z),color='red',label="PT1000 (calib)")
+plt.xlabel("t [s]")
 plt.ylabel("T [deg C]")
+plt.legend()
 plt.show()
 
-plt.scatter(calibADCCounts(z),y)
+plt.scatter(calibADCCounts(z)[x>2000],y[x>2000])
+plt.xlabel("PT1000 [deg C]")
+plt.ylabel("DS18b20 [deg C]")
 plt.show()
 
 #

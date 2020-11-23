@@ -42,19 +42,19 @@ for m in ['cv','iv']:
     plter.labelAxes()
     plt.twinx()
     
-    plter.addPlotFromFile("1002_UL_diode_big_ann_7min/1002_UL_diode_big_ann_7min_2020-11-18_1."+m,
+    plter.addPlotFromFile("1002_UL_diode_big_ann_7min/1002_UL_diode_big_ann_7min_2020-11-19_1."+m,
                                label="1002 (300µm), 6.5 E15 $neq/cm^2$, ann. 7min@60C", 
                                linestyle='dashed'
                                )
     
     
-    plter.addPlotFromFile("1003_UL_diode_big_ann_7min/1003_UL_diode_big_ann_7min_2020-11-18_1."+m,
+    plter.addPlotFromFile("1003_UL_diode_big_ann_7min/1003_UL_diode_big_ann_7min_2020-11-19_1."+m,
                                label="1003 (300µm), 1.0 E15 $neq/cm^2$, ann. 7min@60C",  
                                linestyle='dashed'
                                )
     
     
-    plter.addPlotFromFile("1102_UL_diode_big_ann_7min/1102_UL_diode_big_ann_7min_2020-11-18_1."+m,
+    plter.addPlotFromFile("1102_UL_diode_big_ann_7min/1102_UL_diode_big_ann_7min_2020-11-19_1."+m,
                                label="1102 (300µm), 1.5 E15 $neq/cm^2$, ann. 7min@60C",  
                                linestyle='dashed'
                                )
@@ -83,24 +83,23 @@ for m in ['cv','iv']:
     plter.labelAxes()
     plt.twinx()
     
-    plter.addPlotFromFile("2002_UL_diode_big_ann_7min/2002_UL_diode_big_ann_7min_2020-11-18_1."+m,
+    plter.addPlotFromFile("2002_UL_diode_big_ann_7min/2002_UL_diode_big_ann_7min_2020-11-19_1."+m,
                                label="2002 (200µm), 1E15 $neq/cm^2$, ann. 7min@60C",  
                                linestyle='dashed'
                                )
     
     
-    plter.addPlotFromFile("2003_UL_diode_big_ann_7min/2003_UL_diode_big_ann_7min_2020-11-18_1."+m,
+    plter.addPlotFromFile("2003_UL_diode_big_ann_7min/2003_UL_diode_big_ann_7min_2020-11-19_1."+m,
                                label="2003 (200µm), 1.5E15 $neq/cm^2$, ann. 7min@60C",  
                                linestyle='dashed'
                                )
     
-    try:
-        plter.addPlotFromFile("2102_UL_diode_big_ann_7min/2102_UL_diode_big_ann_7min_2020-11-18_1."+m,
+    
+    plter.addPlotFromFile("2102_UL_diode_big_ann_7min/2102_UL_diode_big_ann_7min_2020-11-19_1."+m,
                                label="2102 (200µm), 2.5E15 $neq/cm^2$, ann. 7min@60C",  
                                linestyle='dashed'
                                )
-    except:
-        pass
+    
     
     plt.legend(loc='upper right')
     

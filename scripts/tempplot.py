@@ -10,9 +10,11 @@ parser.add_argument('inputFile')
 args = parser.parse_args()
 
 
+
+
 x,y = readTempLog(args.inputFile)
 
-plt.plot(x/60.,y)
-plt.xlabel("t [min]")
+plt.plot(x,y)
+plt.xlabel("t [s]")
 plt.ylabel("T [deg C]")
 plt.show()

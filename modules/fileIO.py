@@ -8,21 +8,30 @@ import numpy as np
 def calibration(temp):
     return temp
 
-def readTempLog(filename):
+def readTempLog(filename, calib=False, readLast=True):
     x=[]
     y=[]
+    z=[]
     with open(filename) as file:
         for line in file:
             if len(line) < 1:
                 continue
             sline = line.split(' ')
+            if readLast and int(sline[0]) == 1:
+                x=[]
+                y=[]
+                z=[]
             x.append(int(sline[0]) )
-            tempstr=sline[1][:-1]
+            tempstr=sline[1]
             if tempstr[-4:] == ".625":
                 tempstr=tempstr[:-4]+".0625"
             y.append(float(tempstr))
+            if calib:
+                z.append(float(sline[2]))
             
     tmp = np.array(y)
+    if calib:
+        return np.array(x), calibration(tmp), np.array(z)
     return np.array(x), calibration(tmp)
 
 
