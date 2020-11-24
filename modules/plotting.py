@@ -15,7 +15,7 @@ class curvePlotter(object):
         self.fileReader=fileReader(mode=mode, path=path)
         
         
-    def addPlotFromFile(self,infile, selection=None, min_x=None, **kwargs):
+    def addPlotFromFile(self,infile, selection=None, min_x=None,max_x=None, **kwargs):
         x,y,k = self.fileReader.read(infile)
         if self.mode == "CVs":
             y=convertToCs(y,k)
@@ -26,6 +26,8 @@ class curvePlotter(object):
             x,y=selection(x,y)
         if min_x is not None:
             x, y = x[x>min_x],y[x>min_x]
+        if max_x is not None:
+            x, y = x[x<max_x],y[x<max_x]
             
         self.plt.plot(-x,y, **kwargs)
         

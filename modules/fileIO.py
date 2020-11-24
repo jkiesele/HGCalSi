@@ -4,6 +4,7 @@ reading (and writing) of files
 
 '''
 import numpy as np
+import glob
 
 def calibration(temp):
     return temp
@@ -79,6 +80,16 @@ class fileReader(object):
 
 
     def read(self, filename):
+        if "*" in filename:
+            all=glob.glob(self.path+filename)
+            if len(all) == 0:
+                print("file", self.path+filename, " not found")
+            filename = all[-1]
+            print('auto select last file:',filename)
+            filename = filename[len(self.path):]
+            
+        
+        
         if self.mode == "CV":
             return self.readCV(filename)
         elif self.mode == "IV":
