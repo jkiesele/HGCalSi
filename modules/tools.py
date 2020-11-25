@@ -6,7 +6,7 @@ def convertToCs(Cp, kappa, freq=10000):
     #Cp=np.abs(Cp)
     #kappa=np.abs(kappa)
     omega = math.pi * freq
-    Rp = 1/kappa #Cp/kappa
+    Rp = 1/kappa 
     Cs = (1. + omega**2 * Rp**2 * Cp**2)/(omega**2 * Rp**2 * Cp)
     return Cs
 

@@ -62,7 +62,7 @@ class fileReader(object):
         
         return np.array(V),np.array(C),np.array(kappa)
     
-    def readIV(self,filename):
+    def readIV(self,filename,GR=False):
         infile = open(self.path+filename, 'r')
         lines = infile.read().splitlines()
         fill = False
@@ -73,7 +73,10 @@ class fileReader(object):
                 if line == 'END': break
                 info = line.split('\t')
                 V.append(float(info[0]))
-                I.append(float(info[2]))
+                if GR:
+                    I.append(float(info[1])-float(info[2]))
+                else:    
+                    I.append(float(info[2]))
         
             if line == 'BEGIN': fill = True
         return np.array(V),np.array(I), None
@@ -94,6 +97,8 @@ class fileReader(object):
             return self.readCV(filename)
         elif self.mode == "IV":
             return self.readIV(filename)
+        elif self.mode == "IVGR":
+            return self.readIV(filename,GR=True)
         
         
 

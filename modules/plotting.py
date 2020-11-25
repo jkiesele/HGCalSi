@@ -7,12 +7,14 @@ from tools import convertToCs
     
 class curvePlotter(object):
     def __init__(self, mode, path=""):
-        assert mode == "CV" or mode == "IV" or mode=="CVs"
+        assert mode == "CV" or mode == "IV" or mode=="CVs" or mode == 'IVGR'
         self.mode=mode
         self.plt=plt
         if mode=="CVs":
             mode="CV"
         self.fileReader=fileReader(mode=mode, path=path)
+        if self.mode == "IVGR":
+            self.mode="IV"
         
         
     def addPlotFromFile(self,infile, selection=None, min_x=None,max_x=None, **kwargs):
