@@ -2,14 +2,27 @@
 
 from matplotlib import pyplot as plt
 from fileIO import fileReader
-from tools import convertToCs        
-    
+#from tools import convertToCs        
+import math
+
+def convertToCs(Cp, kappa, freq=10000):
+
+    #Cp=np.abs(Cp)
+    #kappa=np.abs(kappa)
+    omega = math.pi * freq
+    Rp = 1/kappa 
+    Cs = (1. + omega**2 * Rp**2 * Cp**2)/(omega**2 * Rp**2 * Cp)
+    return Cs
+
+
     
 class curvePlotter(object):
     def __init__(self, mode, path=""):
         assert mode == "CV" or mode == "IV" or mode=="CVs" or mode == 'IVGR'
         self.mode=mode
         self.plt=plt
+        self.x=None
+        self.y=None
         if mode=="CVs":
             mode="CV"
         self.fileReader=fileReader(mode=mode, path=path)
@@ -30,7 +43,9 @@ class curvePlotter(object):
             x, y = x[x>min_x],y[x>min_x]
         if max_x is not None:
             x, y = x[x<max_x],y[x<max_x]
-            
+        
+        self.x=x
+        self.y=y
         self.plt.plot(-x,y, **kwargs)
         
     def labelAxes(self):
