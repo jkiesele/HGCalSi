@@ -30,7 +30,7 @@ class curvePlotter(object):
             self.mode="IV"
         
         
-    def addPlotFromFile(self,infile, selection=None, min_x=None,max_x=None, **kwargs):
+    def addPlotFromFile(self,infile, selection=None, min_x=None,max_x=None, noplot=False, **kwargs):
         x,y,k = self.fileReader.read(infile)
         if self.mode == "CVs":
             y=convertToCs(y,k)
@@ -46,7 +46,8 @@ class curvePlotter(object):
         
         self.x=x
         self.y=y
-        self.plt.plot(-x,y, **kwargs)
+        if not noplot:
+            self.plt.plot(-x,y, **kwargs)
         
     def labelAxes(self):
         self.plt.xlabel("-U [V]")

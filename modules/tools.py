@@ -5,7 +5,23 @@ from fileIO import fileReader
 from plotting import curvePlotter
 from matplotlib import pyplot as plt
 import os
+from fitting import DepletionFitter
 
+
+def getDepletionVoltage(filename, debug=True,
+                        const_cap=None,
+                        rising=1, constant=8,
+                        min_x=None,max_x=None,
+                        debugfile=None):
+    pl = curvePlotter(mode="CVs")
+    pl.addPlotFromFile(filename, min_x=min_x,max_x=max_x, noplot=True)
+    
+    df = DepletionFitter(x=pl.x, y=pl.y, 
+                 const_cap=const_cap,
+                 rising=rising, constant=constant,
+                 debugfile=debugfile)
+    v = df.getDepletionVoltage(debugplot=debug)
+    return v
 
 
 def plotFullSet(minstr, outdir, globalpath):
@@ -25,17 +41,17 @@ def plotFullSet(minstr, outdir, globalpath):
             plter=iv_plotter
     
         
-        plter.addPlotFromFile("1002_UL-diode_big_no_ann/1002_UL-diode_big_no_ann_2020-11-12_1."+m,
+        plter.addPlotFromFile("1002_UL_diode_big_no_ann/1002_UL*diode_big_no_ann_2020-11-12_1."+m,
                                    label="1002 (300µm), 6.5 E14 $neq/cm^2$, no ann", 
                                    min_x=-950)
         
         
-        plter.addPlotFromFile("1003_UL-diode_big_no_ann/1003_UL-diode_big_no_ann_2020-11-12_1."+m,
+        plter.addPlotFromFile("1003_UL_diode_big_no_ann/1003_UL*diode_big_no_ann_2020-11-12_1."+m,
                                    label="1003 (300µm), 1.0 E15 $neq/cm^2$, no ann", 
                                    min_x=-950)
       
         
-        plter.addPlotFromFile("1102_UL_diode_big_no_ann/1102_UL_diode_big_no_ann_2020-11-10_2."+m,
+        plter.addPlotFromFile("1102_UL_diode_big_no_ann/1102_UL*diode_big_no_ann_2020-11-10_2."+m,
                                    label="1102 (300µm), 1.5 E15 $neq/cm^2$, no ann", 
                                    min_x=-950)
         
@@ -67,17 +83,17 @@ def plotFullSet(minstr, outdir, globalpath):
         
         
         
-        plter.addPlotFromFile("2002_UL-diode_big_no_ann/2002_UL-diode_big_no_ann_2020-11-12_1."+m,
+        plter.addPlotFromFile("2002_UL_diode_big_no_ann/2002_UL*diode_big_no_ann_2020-11-12_1."+m,
                                    label="2002 (200µm), 1.0 E15 $neq/cm^2$", 
                                    min_x=-950)
         
         
-        plter.addPlotFromFile("2003_UL-diode_big_no_ann/2003_UL-diode_big_no_ann_2020-11-12_1."+m,
+        plter.addPlotFromFile("2003_UL_diode_big_no_ann/2003_UL*diode_big_no_ann_2020-11-12_1."+m,
                                    label="2003 (200µm), 1.5 E15 $neq/cm^2$", 
                                    min_x=-950)
         
         
-        plter.addPlotFromFile("2102_UL-diode_big_no_ann/2102_UL-diode_big_no_ann_2020-11-12_1."+m,
+        plter.addPlotFromFile("2102_UL_diode_big_no_ann/2102_UL*diode_big_no_ann_2020-11-12_1."+m,
                                    label="2102 (200µm), 2.5 E15 $neq/cm^2$", 
                                    min_x=-950)
         
