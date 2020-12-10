@@ -86,9 +86,9 @@ plt.close()
 ####### 200 µm
 
 
-plt.plot(x['2102'],-y['2102'],label='2102, 1.5 E15 neq/cm$^2$',marker=markers)
-plt.plot(x['2003'],-y['2003'],label='2003, 1.0 E15 neq/cm$^2$',marker=markers)
-plt.plot(x['2002'],-y['2002'],label='2002, 0.65 E15 neq/cm$^2$',marker=markers)
+plt.plot(x['2102'],-y['2102'],label='2102, 2.5 E15 neq/cm$^2$',marker=markers)
+plt.plot(x['2003'],-y['2003'],label='2003, 1.5 E15 neq/cm$^2$',marker=markers)
+plt.plot(x['2002'],-y['2002'],label='2002, 1.0 E15 neq/cm$^2$',marker=markers)
 
 plt.xlabel("t [min]")
 plt.ylabel("$-U_{dep}$")
@@ -99,9 +99,9 @@ plt.close()
 
 
 
-plt.plot(x['2102'],-ivAtDep['2102'],label='2102, 1.5 E15 neq/cm$^2$',marker=markers)
-plt.plot(x['2003'],-ivAtDep['2003'],label='2003, 1.0 E15 neq/cm$^2$',marker=markers)
-plt.plot(x['2002'],-ivAtDep['2002'],label='2002, 0.65 E15 neq/cm$^2$',marker=markers)
+plt.plot(x['2102'],-ivAtDep['2102'],label='2102, 2.5 E15 neq/cm$^2$',marker=markers)
+plt.plot(x['2003'],-ivAtDep['2003'],label='2003, 1.5 E15 neq/cm$^2$',marker=markers)
+plt.plot(x['2002'],-ivAtDep['2002'],label='2002, 1.0 E15 neq/cm$^2$',marker=markers)
 
 plt.xlabel("t [min]")
 plt.ylabel("$-I\ (U_{dep})$")
@@ -113,9 +113,9 @@ plt.close()
 
 
 
-plt.plot(x['2102'],-ivFixed['2102'],label='2102, 1.5 E15 neq/cm$^2$',marker=markers)
-plt.plot(x['2003'],-ivFixed['2003'],label='2003, 1.0 E15 neq/cm$^2$',marker=markers)
-plt.plot(x['2002'],-ivFixed['2002'],label='2002, 0.65 E15 neq/cm$^2$',marker=markers)
+plt.plot(x['2102'],-ivFixed['2102'],label='2102, 2.5 E15 neq/cm$^2$',marker=markers)
+plt.plot(x['2003'],-ivFixed['2003'],label='2003, 1.5 E15 neq/cm$^2$',marker=markers)
+plt.plot(x['2002'],-ivFixed['2002'],label='2002, 1.0 E15 neq/cm$^2$',marker=markers)
 
 plt.xlabel("t [min]")
 plt.ylabel("$-I\ (-"+str(fixedvoltage)+"V)$")
