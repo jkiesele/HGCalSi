@@ -28,6 +28,7 @@ def plotFullSet(minstr, outdir, globalpath):
     os.system("mkdir -p "+outdir)
     
     
+    
     cv_plotter = curvePlotter(mode="CVs",path=globalpath)
     iv_plotter = curvePlotter(mode="IV",path=globalpath)
     
@@ -42,17 +43,17 @@ def plotFullSet(minstr, outdir, globalpath):
     
         
         plter.addPlotFromFile("1002_UL_diode_big_no_ann/1002_UL*diode_big_no_ann_2020-11-12_1."+m,
-                                   label="1002 (300µm), 6.5 E14 $neq/cm^2$, no ann", 
+                                   label="6.5 E14 $neq/cm^2$, no ann.", 
                                    min_x=-950)
         
         
         plter.addPlotFromFile("1003_UL_diode_big_no_ann/1003_UL*diode_big_no_ann_2020-11-12_1."+m,
-                                   label="1003 (300µm), 1.0 E15 $neq/cm^2$, no ann", 
+                                   label="1.0 E15 $neq/cm^2$, no ann.", 
                                    min_x=-950)
       
         
         plter.addPlotFromFile("1102_UL_diode_big_no_ann/1102_UL*diode_big_no_ann_2020-11-10_2."+m,
-                                   label="1102 (300µm), 1.5 E15 $neq/cm^2$, no ann", 
+                                   label="1.5 E15 $neq/cm^2$, no ann.", 
                                    min_x=-950)
         
         #plt.legend(loc='lower left')
@@ -62,39 +63,43 @@ def plotFullSet(minstr, outdir, globalpath):
         
         
         plter.addPlotFromFile("1002_UL_diode_big_ann_"+minstr+"/*."+m,
-                                   label="1002 (300µm), 6.5 E14 $neq/cm^2$, ann. "+minstr+"@60C", 
+                                   label="6.5 E14 $neq/cm^2$, "+minstr+"@60C", 
                                    linestyle='dashed'
                                    )
         
     
         plter.addPlotFromFile("1003_UL_diode_big_ann_"+minstr+"/*."+m,
-                                   label="1003 (300µm), 1.0 E15 $neq/cm^2$, ann. "+minstr+"@60C",  
+                                   label="1.0 E15 $neq/cm^2$, "+minstr+"@60C",  
                                    linestyle='dashed'
                                    )
         
         plter.addPlotFromFile("1102_UL_diode_big_ann_"+minstr+"/*."+m,
-                                   label="1102 (300µm), 1.5 E15 $neq/cm^2$, ann. "+minstr+"@60C",  
+                                   label="1.5 E15 $neq/cm^2$, "+minstr+"@60C",  
                                    linestyle='dashed'
                                    )
         
-        
+        plt.title("300µm")
         plt.legend()
+        if m=='cv':
+            plt.ylim([0.,1.25e22])
+        else:
+            plt.ylim([0.,1.5e-5])
         plter.savePlot(outdir+m+"_1001_1002_1003_1102.pdf",nolegend=True)
         
         
         
         plter.addPlotFromFile("2002_UL_diode_big_no_ann/2002_UL*diode_big_no_ann_2020-11-12_1."+m,
-                                   label="2002 (200µm), 1.0 E15 $neq/cm^2$", 
+                                   label="1.0 E15 $neq/cm^2$ ,no ann.", 
                                    min_x=-950)
         
         
         plter.addPlotFromFile("2003_UL_diode_big_no_ann/2003_UL*diode_big_no_ann_2020-11-12_1."+m,
-                                   label="2003 (200µm), 1.5 E15 $neq/cm^2$", 
+                                   label="1.5 E15 $neq/cm^2$, no ann.", 
                                    min_x=-950)
         
         
         plter.addPlotFromFile("2102_UL_diode_big_no_ann/2102_UL*diode_big_no_ann_2020-11-12_1."+m,
-                                   label="2102 (200µm), 2.5 E15 $neq/cm^2$", 
+                                   label="2.5 E15 $neq/cm^2$, no ann.", 
                                    min_x=-950)
         
         #plt.legend(loc='lower left')
@@ -105,26 +110,31 @@ def plotFullSet(minstr, outdir, globalpath):
         
         
         plter.addPlotFromFile("2002_UL_diode_big_ann_"+minstr+"/*."+m,
-                                   label="2002 (200µm), 1E15 $neq/cm^2$, ann. "+minstr+"@60C",  
+                                   label="1E15 $neq/cm^2$, "+minstr+"@60C",  
                                    linestyle='dashed'
                                    )
         
         
         
         plter.addPlotFromFile("2003_UL_diode_big_ann_"+minstr+"/*."+m,
-                                   label="2003 (200µm), 1.5E15 $neq/cm^2$, ann. "+minstr+"@60C",  
+                                   label="1.5E15 $neq/cm^2$, "+minstr+"@60C",  
                                    linestyle='dashed'
                                    )
         
        
         
         plter.addPlotFromFile("2102_UL_diode_big_ann_"+minstr+"/*."+m,
-                                   label="2102 (200µm), 2.5E15 $neq/cm^2$, ann. "+minstr+"@60C",  
+                                   label="2.5E15 $neq/cm^2$, "+minstr+"@60C",  
                                    linestyle='dashed'
                                    )
         
         
+        plt.title("200µm")
         plt.legend()
+        if m=='cv':
+            plt.ylim([0.,6e21])
+        else:
+            plt.ylim([-1.e-6,2.1e-5])
         
         plter.savePlot(outdir+m+"_2001_2002_2003_2102.pdf",nolegend=True)
  

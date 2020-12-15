@@ -3,6 +3,9 @@
 from annealings import getFullSet
 from matplotlib import pyplot as plt
 import os 
+from fitting import AnnealingFitter
+import numpy as np
+import styles
 
 markers='x'
 fixedvoltage=600
@@ -13,41 +16,94 @@ debugdir=outdir+'debug'
 os.system('mkdir -p '+debugdir)
 debugdir+='/'
 
-x={}
-y={}
+class graph(object):
+    def __init__(self, x,y, xerr=None, yerr=None):
+        self.x=np.array(x)
+        self.y=np.array(y)
+        self.xerr=np.array(xerr)
+        self.yerr=np.array(yerr)
+        if yerr is None:
+            self.yerr = np.zeros(self.x.shape) #pass #self.yerr = np.sqrt(10.**2+(self.y*0.025)**2)
+        #print(self.xerr.shape)
+        #print(self.yerr.shape)
+        #exit()
+        
+    def plot(self,**kwargs):
+        plt.errorbar(self.x,self.y, self.yerr, self.xerr,**kwargs)
+
+
 ivAtDep={}
 ivHiDep={}
 ivFixed={}
 
-for d in ["1102", "1003", "1002", "2102", "2003", "2002"]:
+depVolt={}
+fittedAn={}
+
+minima={}
+
+alldiodes = ["1102", "1003", "1002", "2102", "2003", "2002"]
+
+for d in alldiodes:
     
 
-    x[d],y[d],ivs = getFullSet(d,debugall=True,debugdir=debugdir)
-    ivAtDep[d] = ivs.eval(y[d])
-    ivHiDep[d] = ivs.eval(y[d]*1.1)
-    fiv = ivs.eval([- fixedvoltage for _ in range(len(y[d]))])
-    print("fixed I for ", d, fiv)
-    ivFixed[d] = fiv
+    x,y,ivs, xerr, yerr = getFullSet(d,debugall=True,debugdir=debugdir,useIVGP=False)
+    an = AnnealingFitter()
+    an.fit(x,-y,xerr)
+    fittedAn[d]=an
 
+    
+    depVolt[d] = graph(x, -y, xerr, yerr)
+    depVolt[d].plot()
+    
+    smoothx=np.arange(np.min(x),np.max(x), 1)
+    fitted = an.DNeff(smoothx)
+    minima[d]=smoothx[np.argmin(fitted)]
+    plt.plot(smoothx,fitted)
+    plt.xscale('log')
+    plt.savefig(debugdir+'/smoothfit_'+d+'.pdf')
+    
+    ivAtDepy = ivs.eval(y)
+    ivAtDep[d] = graph(x,-ivAtDepy,xerr)
+    ivHiDepy = ivs.eval(y*1.1)
+    ivHiDep[d] = graph(x,-ivHiDepy,xerr)
+    fiv = ivs.eval([- fixedvoltage for _ in range(len(y))])
+    ivFixedy = fiv
+    ivFixed[d] = graph(x,-ivFixedy,xerr)
+    
+    #exit()
+    
 plt.close()
-plt.plot(x['1102'],-y['1102'],label='1102, 1.5 E15 neq/cm$^2$',marker=markers)
-plt.plot(x['1003'],-y['1003'],label='1003, 1.0 E15 neq/cm$^2$',marker=markers)
-plt.plot(x['1002'],-y['1002'],label='1002, 0.65 E15 neq/cm$^2$',marker=markers)
+for i in range(len(alldiodes)):
+    plt.plot(i, minima[alldiodes[i]], label=alldiodes[i],marker='o')
+    
+#plt.legend()
+plt.ylabel("Annealing minimum [min]")
+plt.xticks(range(len(alldiodes)),alldiodes)
+plt.xlabel("Sensor number")
+plt.savefig(outdir+"annealing_minima.pdf")
+plt.close()
 
+depVolt['1102'].plot(label='1102, 1.5 E15 neq/cm$^2$',marker=markers )#,linestyle='None')
+depVolt['1003'].plot(label='1003, 1.0 E15 neq/cm$^2$',marker=markers )#,linestyle='None')
+depVolt['1002'].plot(label='1002, 0.65 E15 neq/cm$^2$',marker=markers)#,linestyle='None')
+
+plt.title("300µm")
 plt.xlabel("t [min]")
-plt.ylabel("$-U_{dep}$")
+plt.ylabel("$-U_{dep} [V]$")
 plt.xscale('log')
 
 plt.legend()
 plt.savefig(outdir+"dep_voltage_300.pdf")
 plt.close()
 
-plt.plot(x['1102'],-ivAtDep['1102'],label='1102, 1.5 E15 neq/cm$^2$',marker=markers)
-plt.plot(x['1003'],-ivAtDep['1003'],label='1003, 1.0 E15 neq/cm$^2$',marker=markers)
-plt.plot(x['1002'],-ivAtDep['1002'],label='1002, 0.65 E15 neq/cm$^2$',marker=markers)
+plt.title("300µm")
+ivAtDep['1102'].plot(label='1102, 1.5 E15 neq/cm$^2$',marker=markers)
+ivAtDep['1003'].plot(label='1003, 1.0 E15 neq/cm$^2$',marker=markers)
+ivAtDep['1002'].plot(label='1002, 0.65 E15 neq/cm$^2$',marker=markers)
 
+plt.title("300µm")
 plt.xlabel("t [min]")
-plt.ylabel("$-I\ (U_{dep})$")
+plt.ylabel("$-I\ (U_{dep}) [A]$")
 plt.xscale('log')
 
 plt.legend()
@@ -55,12 +111,13 @@ plt.savefig(outdir+"leakage_at_dep_300.pdf")
 plt.close()
 
 
-plt.plot(x['1102'],-ivHiDep['1102'],label='1102, 1.5 E15 neq/cm$^2$',marker=markers)
-plt.plot(x['1003'],-ivHiDep['1003'],label='1003, 1.0 E15 neq/cm$^2$',marker=markers)
-plt.plot(x['1002'],-ivHiDep['1002'],label='1002, 0.65 E15 neq/cm$^2$',marker=markers)
+ivHiDep['1102'].plot(label='1102, 1.5 E15 neq/cm$^2$',marker=markers)
+ivHiDep['1003'].plot(label='1003, 1.0 E15 neq/cm$^2$',marker=markers)
+ivHiDep['1002'].plot(label='1002, 0.65 E15 neq/cm$^2$',marker=markers)
 
+plt.title("300µm")
 plt.xlabel("t [min]")
-plt.ylabel("$-I\ (1.1 \cdot U_{dep})$")
+plt.ylabel("$-I\ (1.1 \cdot U_{dep}) [A]$")
 plt.xscale('log')
 
 plt.legend()
@@ -68,13 +125,14 @@ plt.savefig(outdir+"leakage_at_hidep_300.pdf")
 plt.close()
 
 
-plt.plot(x['1102'],-ivFixed['1102'],label='1102, 1.5 E15 neq/cm$^2$',marker=markers)
-plt.plot(x['1003'],-ivFixed['1003'],label='1003, 1.0 E15 neq/cm$^2$',marker=markers)
-plt.plot(x['1002'],-ivFixed['1002'],label='1002, 0.65 E15 neq/cm$^2$',marker=markers)
+ivFixed['1102'].plot(label='1102, 1.5 E15 neq/cm$^2$',marker=markers)
+ivFixed['1003'].plot(label='1003, 1.0 E15 neq/cm$^2$',marker=markers)
+ivFixed['1002'].plot(label='1002, 0.65 E15 neq/cm$^2$',marker=markers)
 
 
+plt.title("300µm")
 plt.xlabel("t [min]")
-plt.ylabel("$-I\ (-"+str(fixedvoltage)+"V)$")
+plt.ylabel("$-I\ (-"+str(fixedvoltage)+"V) [A]$")
 plt.xscale('log')
 
 plt.legend()
@@ -86,12 +144,13 @@ plt.close()
 ####### 200 µm
 
 
-plt.plot(x['2102'],-y['2102'],label='2102, 2.5 E15 neq/cm$^2$',marker=markers)
-plt.plot(x['2003'],-y['2003'],label='2003, 1.5 E15 neq/cm$^2$',marker=markers)
-plt.plot(x['2002'],-y['2002'],label='2002, 1.0 E15 neq/cm$^2$',marker=markers)
+depVolt['2102'].plot(label='2102, 2.5 E15 neq/cm$^2$',marker=markers)
+depVolt['2003'].plot(label='2003, 1.5 E15 neq/cm$^2$',marker=markers)
+depVolt['2002'].plot(label='2002, 1.0 E15 neq/cm$^2$',marker=markers)
 
+plt.title("200µm")
 plt.xlabel("t [min]")
-plt.ylabel("$-U_{dep}$")
+plt.ylabel("$-U_{dep} [V]$")
 plt.xscale('log')
 plt.legend()
 plt.savefig(outdir+"dep_voltage_200.pdf")
@@ -99,12 +158,13 @@ plt.close()
 
 
 
-plt.plot(x['2102'],-ivAtDep['2102'],label='2102, 2.5 E15 neq/cm$^2$',marker=markers)
-plt.plot(x['2003'],-ivAtDep['2003'],label='2003, 1.5 E15 neq/cm$^2$',marker=markers)
-plt.plot(x['2002'],-ivAtDep['2002'],label='2002, 1.0 E15 neq/cm$^2$',marker=markers)
+plt.title("200µm")
+ivAtDep['2102'].plot(label='2102, 2.5 E15 neq/cm$^2$',marker=markers)
+ivAtDep['2003'].plot(label='2003, 1.5 E15 neq/cm$^2$',marker=markers)
+ivAtDep['2002'].plot(label='2002, 1.0 E15 neq/cm$^2$',marker=markers)
 
 plt.xlabel("t [min]")
-plt.ylabel("$-I\ (U_{dep})$")
+plt.ylabel("$-I\ (U_{dep}) [A]$")
 plt.xscale('log')
 
 plt.legend()
@@ -113,12 +173,13 @@ plt.close()
 
 
 
-plt.plot(x['2102'],-ivFixed['2102'],label='2102, 2.5 E15 neq/cm$^2$',marker=markers)
-plt.plot(x['2003'],-ivFixed['2003'],label='2003, 1.5 E15 neq/cm$^2$',marker=markers)
-plt.plot(x['2002'],-ivFixed['2002'],label='2002, 1.0 E15 neq/cm$^2$',marker=markers)
+plt.title("200µm")
+ivFixed['2102'].plot(label='2102, 2.5 E15 neq/cm$^2$',marker=markers)
+ivFixed['2003'].plot(label='2003, 1.5 E15 neq/cm$^2$',marker=markers)
+ivFixed['2002'].plot(label='2002, 1.0 E15 neq/cm$^2$',marker=markers)
 
 plt.xlabel("t [min]")
-plt.ylabel("$-I\ (-"+str(fixedvoltage)+"V)$")
+plt.ylabel("$-I\ (-"+str(fixedvoltage)+"V) [A]$")
 plt.xscale('log')
 
 plt.legend()

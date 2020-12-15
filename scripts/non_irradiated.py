@@ -4,6 +4,7 @@ from fileIO import fileReader
 from plotting import curvePlotter
 
 from matplotlib import pyplot as plt
+import styles
 
 globalpath="/Users/jkiesele/cern_afs/eos_hgsensor_testres/Results_SSD/CVIV/Diode_TS/"
 

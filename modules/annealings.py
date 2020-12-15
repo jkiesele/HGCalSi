@@ -7,6 +7,16 @@ from matplotlib import pyplot as plt
 import numpy as np
 from tools import getDepletionVoltage
 from fitting import fittedIV
+from diodes import diodes
+
+#dict of annealing steps
+
+
+
+
+
+
+
 
 class IvSet(object):
     def __init__(self):
@@ -20,12 +30,13 @@ class IvSet(object):
             raise ValueError("valtage array must have same size as IV array")
         return np.array([self.ivs[i].eval(x[i])[0] for i in range(len(x))], dtype='float')
 
-def getFullSet(diodestr, debugall=False, time_offset=10, debugdir=None):
+def getFullSet(diodestr, debugall=False,  debugdir=None, useIVGP=False):
 
     globalpath="/Users/jkiesele/cern_afs/eos_hgsensor_testres/Results_SSD/CVIV/Diode_TS/"
     
     x=[]
     y=[]
+    yerr=[]
     ivs=IvSet()
     
     const_cap=None
@@ -39,7 +50,9 @@ def getFullSet(diodestr, debugall=False, time_offset=10, debugdir=None):
     elif diodestr=="2003" or diodestr=="2002" or diodestr=="2102":
         const_cap=5.500145558851301e+21
     
+    time_offset=diodes[diodestr].ann_offset
     time=0
+    
     v = getDepletionVoltage(globalpath+diodestr+"_UL_diode_big_no_ann/*.cv",min_x=-850,
                             const_cap=const_cap,
                              rising=1.1,
@@ -47,31 +60,44 @@ def getFullSet(diodestr, debugall=False, time_offset=10, debugdir=None):
                              debugfile=debugdir+diodestr+'_'+str(time))
     x.append(time+time_offset)
     y.append(v)
+    yerr.append(0.*v*0.05)
     ivfit = fittedIV(globalpath,diodestr+"_UL_diode_big_no_ann/*.iv",debug=debugall,
-                     debugfile=debugdir+diodestr+'_'+str(time)+'iv',min_x=-850)
+                     debugfile=debugdir+diodestr+'_'+str(time)+'iv',min_x=-850,
+                     useGP=useIVGP)
     ivs.append(ivfit)
     
     ########
     
-    for time in [73,103,153,247,378,645,1352]:
+    for time in [73,103,153,247,378,645,1352,2919]:
         thiscap = None
         if time >= 378:
             thiscap = const_cap
         if time < 100:
             thiscap = const_cap
             
+        rising=1.1
+        if time==2919 and (diodestr=="2003" or diodestr=="2102" or diodestr=="1003"):
+            rising=0.0
+        if time<=646 and (diodestr=="2002" or diodestr=="2002"):
+            rising=1.5
+            
             
         v = getDepletionVoltage(globalpath+diodestr+"_UL_diode_big_ann_"+str(time)+"min/*.cv",min_x=-900,
                             const_cap=thiscap,
-                             rising=1.1,
+                             rising=rising,
                              debug=debugall,debugfile=debugdir+diodestr+'_'+str(time))
         x.append(time+time_offset)
         y.append(v)
+        if thiscap is not None:
+            yerr.append(0.*v*0.05)
+        else:
+            yerr.append(0.*v*0.025)
     
         print('Depletion voltage at',time, diodestr, 'is',v)
         
         ivfit = fittedIV(globalpath,diodestr+"_UL_diode_big_ann_"+str(time)+"min/*.iv",
-                         debug=debugall,debugfile=debugdir+diodestr+'_'+str(time)+'iv',min_x=-900)
+                         debug=debugall,debugfile=debugdir+diodestr+'_'+str(time)+'iv',min_x=-900,
+                         useGP=useIVGP)
         
         ifix = ivfit.eval([-600])
         print("leakage at -600V",ifix,'\n')
@@ -79,8 +105,8 @@ def getFullSet(diodestr, debugall=False, time_offset=10, debugdir=None):
         ivs.append(ivfit)
     
         
-
-    
-    
-    return np.array(x),np.array(y), ivs
+    x = np.array(x)
+    xerr = x * 0.025 + 1 #1 minute unc from irradiation
+    yerr = np.array(yerr)
+    return np.array(x),np.array(y), ivs, xerr, yerr
    

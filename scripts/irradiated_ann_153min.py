@@ -1,8 +1,8 @@
 #!/usr/bin/python3
 
+import styles
 from fileIO import fileReader
 from plotting import curvePlotter
-
 
 
 from matplotlib import pyplot as plt

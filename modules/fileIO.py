@@ -88,6 +88,7 @@ class fileReader(object):
             if len(all) == 0:
                 print("file", self.path+filename, " not found")
             filename = all[-1]
+            print(all)
             print('auto select last file:',filename)
             filename = filename[len(self.path):]
             

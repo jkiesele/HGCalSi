@@ -1,5 +1,6 @@
 from numpy import arange
 import numpy as np
+import math
 from pandas import read_csv
 from scipy.optimize import curve_fit
 from matplotlib import pyplot
@@ -11,6 +12,69 @@ from plotting import curvePlotter
 from lmfit.models import LinearModel
 import sklearn.gaussian_process as gp
 
+import scipy.odr as odr
+import matplotlib.pyplot as plt
+
+
+class AnnealingFitter(object):
+    def __init__(self):
+        self.a=None
+        self.tau_0=None
+        self.N_c =None
+        self.N_Yinf = None
+        self.tau_y=None
+        
+        self.scalex=100.
+        self.scaley=100.
+        
+    def _DNeff(self, B, t):
+        a, tau_0, N_c, N_Yinf, tau_y = B
+        return a*np.exp(- t/self.scalex/tau_0) + N_c + N_Yinf * ( 1. - 1./(1.+t/self.scalex/tau_y))
+       
+    def __DNeff(self, t, a, tau_0, N_c, N_Yinf, tau_y):
+        return a*np.exp(- t/self.scalex/tau_0) + N_c + N_Yinf * ( 1. - 1./(1.+t/self.scalex/tau_y))
+       
+       
+    def DNeff(self, t):
+        if not len(t):
+            t=np.array(t)
+        return self.a*np.exp(- t/self.scalex/self.tau_0) + self.N_c + self.N_Yinf * ( 1. - 1./(1.+t/self.scalex/self.tau_y))
+
+
+    def fit(self, x, y, xerr, yerr=None):
+        
+        if True:
+            m = odr.Model(self._DNeff)
+            if yerr is None:
+                yerr = y/1000.
+            mydata = odr.RealData(x, y, sx=xerr, sy=yerr)
+            myodr = odr.ODR(mydata, m, beta0=[ 2.37213506e+02 , 
+                                               3.45510553e-01 ,
+                                               1.96604468e+02 ,
+                                               -5.23269275e+06,
+                                               -1.91549327e+05])
+            out=myodr.run()
+            #print(out)
+            popt = out.beta
+            self.a=popt[0]
+            self.tau_0=popt[1]
+            self.N_c =popt[2]
+            self.N_Yinf = popt[3]
+            self.tau_y=popt[4]
+        
+            return
+        
+        popt, _ = curve_fit(self.__DNeff, x, y)
+        print(popt)
+        self.a=popt[0]
+        self.tau_0=popt[1]
+        self.N_c =popt[2]
+        self.N_Yinf = popt[3]
+        self.tau_y=popt[4]
+        
+        
+    
+
 class Linear(object):
     def __init__(self, a=None,b=None):
         self.a=a 
@@ -18,15 +82,50 @@ class Linear(object):
         
     def __call__(self,x,a=None,b=None):
         if a is None and b is None:
-            return 1e19*self.a*(x/100 + 9) + self.b*1e22
+            return 1e19*self.a*(x/10 + 9) + self.b*1e22
         else:
-            return 1e19*a*(x/100 + 9) + b*1e22
+            return 1e19*a*(x/10 + 9) + b*1e22
         
     def getA(self):
         return 1e19*self.a
     
     def getB(self):
         return 1e22*self.b
+    
+    
+class DoubleLinear(object):
+    def __init__(self,
+        a0=None         ,
+        b0=None         ,
+        a1=None         ,
+        b1=None         ,
+        mixpoint=None   ,
+        mixsmooth=None
+        ):
+        self.a0=a0
+        self.b0=b0
+        self.a1=a1
+        self.b1=b1
+        self.mixpoint=mixpoint
+        self.mixsmooth=mixsmooth
+        
+    def __call__(self,x,a0=None,b0=None, a1=None,b1=None, mixsmooth=None):#, mixpoint=None):
+        if a0 is None:
+            a0=self.a0
+            b0=self.b0
+            a1=self.a1
+            b1=self.b1
+            mixsmooth=self.mixsmooth
+            mixpoint=self.mixpoint
+            
+        import tensorflow as tf
+            
+        lin0 = 1e19* a0*(x/10 + 9) +  b0*1e22
+        lin1 = 1e19* a1*(x/10 + 9) +  b1*1e22
+        sig = tf.nn.sigmoid(mixsmooth * (x - 500.))
+        return lin0*sig + lin1*(1.-sig)
+        
+    
  
 class DepletionFitter(object):
     def __init__(self,  x=None, y=None, 
@@ -65,10 +164,37 @@ class DepletionFitter(object):
         
     def _findcut(self):
         #simple comparison of average slope and current slope
+        x = self.data['x']
+        y = self.data['y']
+        #import tensorflow as tf
+        #from scipy.optimize import minimize, SR1
+        #
+        #def func(arr):
+        #    ypred = DoubleLinear()(x,*arr)
+        #    return np.mean((y - ypred)**2)
+        #x0=[-5, 0.1, 0., 1, 0.01, -400]
+        #
+        #res = minimize( func, x0,  hess=SR1())
+        #
+        #exit()
+        
+        #popt, _ = curve_fit(DoubleLinear(), x, y, p0=[-5, 0.1, 0., 1, 0.01])
+        #dlin = DoubleLinear(*popt)
+        #plt.plot(x,dlin(x))
+        #plt.plot(x,y)
+        #plt.show()
+        #exit()
+        
+        #
+        #
+        #
+        ##exit()
         slope = self.data['slope']
         avgslope = np.mean(np.abs(slope))
         rising = np.abs(slope) > avgslope*self.rising
+        print('rising',slope[rising],'avg',avgslope)
         constant = np.abs(slope)*self.constant < avgslope
+        print('constant',slope[constant])
         return rising, constant
        
     def _linear(self, x, a, b): 
@@ -90,6 +216,8 @@ class DepletionFitter(object):
             
             popt, _ = curve_fit(Linear(), x, y)
             a, b = popt
+            print(a,b)
+            #exit()
             line = Linear(a=a, b=b)
             funcs.append(line)
             if self.const_cap is not None:
@@ -178,8 +306,10 @@ class GPFitter(object):
     
       
 class fittedIV(object):
-    def __init__(self, globalpath, file=None, debug=False, debugfile=None, **kwargs):
+    def __init__(self, globalpath, file=None, debug=False, debugfile=None, useGP=False, **kwargs):
         self.fitter=PolFitter()
+        if useGP:
+            self.fitter=GPFitter()
         self.plter = curvePlotter(path=globalpath, mode="IV")
         self.debugfile=debugfile
         if file is not None:

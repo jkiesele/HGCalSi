@@ -47,6 +47,8 @@ class curvePlotter(object):
         self.x=x
         self.y=y
         if not noplot:
+            if self.mode=='IV':
+                y=-y
             self.plt.plot(-x,y, **kwargs)
         
     def labelAxes(self):
@@ -56,7 +58,7 @@ class curvePlotter(object):
         elif self.mode == "CVs":
             self.plt.ylabel("$1/C_s^2\ [1/F^2]$")
         elif self.mode == "IV":
-            plt.ylabel("I [A]")
+            plt.ylabel("-I [A]")
         
     def _createPlot(self,nolegend=False):
         self.labelAxes()
