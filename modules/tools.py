@@ -24,8 +24,10 @@ def getDepletionVoltage(filename, debug=True,
     return v
 
 
-def plotFullSet(minstr, outdir, globalpath):
+def plotFullSet(minstr, outdir, identifier = "UL_diode_big", globalpath=None):
     os.system("mkdir -p "+outdir)
+    if globalpath is None:
+        globalpath=os.getenv("DATAPATH")+'/'
     
     
     
@@ -33,7 +35,7 @@ def plotFullSet(minstr, outdir, globalpath):
     iv_plotter = curvePlotter(mode="IV",path=globalpath)
     
     
-    linestyle='-'
+    
     
     for m in ['cv','iv']:
         
@@ -42,17 +44,17 @@ def plotFullSet(minstr, outdir, globalpath):
             plter=iv_plotter
     
         
-        plter.addPlotFromFile("1002_UL_diode_big_no_ann/1002_UL*diode_big_no_ann_2020-11-12_1."+m,
+        plter.addPlotFromFile("1002_UL*diode_big_no_ann/1002_UL*diode_big_no_ann_2020-11-12_1."+m,
                                    label="6.5 E14 $neq/cm^2$, no ann.", 
                                    min_x=-950)
         
         
-        plter.addPlotFromFile("1003_UL_diode_big_no_ann/1003_UL*diode_big_no_ann_2020-11-12_1."+m,
+        plter.addPlotFromFile("1003_UL*diode_big_no_ann/1003_UL*diode_big_no_ann_2020-11-12_1."+m,
                                    label="1.0 E15 $neq/cm^2$, no ann.", 
                                    min_x=-950)
       
         
-        plter.addPlotFromFile("1102_UL_diode_big_no_ann/1102_UL*diode_big_no_ann_2020-11-10_2."+m,
+        plter.addPlotFromFile("1102_UL*diode_big_no_ann/1102_UL*diode_big_no_ann_2020-11-10_2."+m,
                                    label="1.5 E15 $neq/cm^2$, no ann.", 
                                    min_x=-950)
         
@@ -62,18 +64,18 @@ def plotFullSet(minstr, outdir, globalpath):
         
         
         
-        plter.addPlotFromFile("1002_UL_diode_big_ann_"+minstr+"/*."+m,
+        plter.addPlotFromFile("1002_"+identifier+"_ann_"+minstr+"/*."+m,
                                    label="6.5 E14 $neq/cm^2$, "+minstr+"@60C", 
                                    linestyle='dashed'
                                    )
         
     
-        plter.addPlotFromFile("1003_UL_diode_big_ann_"+minstr+"/*."+m,
+        plter.addPlotFromFile("1003_"+identifier+"_ann_"+minstr+"/*."+m,
                                    label="1.0 E15 $neq/cm^2$, "+minstr+"@60C",  
                                    linestyle='dashed'
                                    )
         
-        plter.addPlotFromFile("1102_UL_diode_big_ann_"+minstr+"/*."+m,
+        plter.addPlotFromFile("1102_"+identifier+"_ann_"+minstr+"/*."+m,
                                    label="1.5 E15 $neq/cm^2$, "+minstr+"@60C",  
                                    linestyle='dashed'
                                    )
@@ -88,17 +90,17 @@ def plotFullSet(minstr, outdir, globalpath):
         
         
         
-        plter.addPlotFromFile("2002_UL_diode_big_no_ann/2002_UL*diode_big_no_ann_2020-11-12_1."+m,
+        plter.addPlotFromFile("2002_UL*diode_big_no_ann/2002_UL*diode_big_no_ann_2020-11-12_1."+m,
                                    label="1.0 E15 $neq/cm^2$ ,no ann.", 
                                    min_x=-950)
         
         
-        plter.addPlotFromFile("2003_UL_diode_big_no_ann/2003_UL*diode_big_no_ann_2020-11-12_1."+m,
+        plter.addPlotFromFile("2003_UL*diode_big_no_ann/2003_UL*diode_big_no_ann_2020-11-12_1."+m,
                                    label="1.5 E15 $neq/cm^2$, no ann.", 
                                    min_x=-950)
         
         
-        plter.addPlotFromFile("2102_UL_diode_big_no_ann/2102_UL*diode_big_no_ann_2020-11-12_1."+m,
+        plter.addPlotFromFile("2102_UL*diode_big_no_ann/2102_UL*diode_big_no_ann_2020-11-12_1."+m,
                                    label="2.5 E15 $neq/cm^2$, no ann.", 
                                    min_x=-950)
         
@@ -109,21 +111,21 @@ def plotFullSet(minstr, outdir, globalpath):
         
         
         
-        plter.addPlotFromFile("2002_UL_diode_big_ann_"+minstr+"/*."+m,
+        plter.addPlotFromFile("2002_"+identifier+"_ann_"+minstr+"/*."+m,
                                    label="1E15 $neq/cm^2$, "+minstr+"@60C",  
                                    linestyle='dashed'
                                    )
         
         
         
-        plter.addPlotFromFile("2003_UL_diode_big_ann_"+minstr+"/*."+m,
+        plter.addPlotFromFile("2003_"+identifier+"_ann_"+minstr+"/*."+m,
                                    label="1.5E15 $neq/cm^2$, "+minstr+"@60C",  
                                    linestyle='dashed'
                                    )
         
        
         
-        plter.addPlotFromFile("2102_UL_diode_big_ann_"+minstr+"/*."+m,
+        plter.addPlotFromFile("2102_"+identifier+"_ann_"+minstr+"/*."+m,
                                    label="2.5E15 $neq/cm^2$, "+minstr+"@60C",  
                                    linestyle='dashed'
                                    )

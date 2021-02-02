@@ -1,6 +1,7 @@
 #!/usr/bin/python3
 
 from argparse import ArgumentParser
+import os
 parser = ArgumentParser()
 parser.add_argument('inputDir')
 parser.add_argument('number', default="-1")
@@ -17,7 +18,7 @@ from fitting import GPFitter, fittedIV
 
 from matplotlib import pyplot as plt
 
-globalpath="/Users/jkiesele/cern_afs/eos_hgsensor_testres/Results_SSD/CVIV/Diode_TS/"
+globalpath=os.getenv("DATAPATH")+'/'
 
 cv_plotter = curvePlotter(mode="CVs",path=globalpath)
 cv_plotter.addPlotFromFile(args.inputDir+"/*"+no+".cv",

@@ -109,7 +109,7 @@ class DoubleLinear(object):
         self.mixpoint=mixpoint
         self.mixsmooth=mixsmooth
         
-    def __call__(self,x,a0=None,b0=None, a1=None,b1=None, mixsmooth=None):#, mixpoint=None):
+    def __call__(self,x,a0=None,b0=None, a1=None,b1=None, mixsmooth=None, mixpoint=None):
         if a0 is None:
             a0=self.a0
             b0=self.b0
@@ -122,7 +122,8 @@ class DoubleLinear(object):
             
         lin0 = 1e19* a0*(x/10 + 9) +  b0*1e22
         lin1 = 1e19* a1*(x/10 + 9) +  b1*1e22
-        sig = tf.nn.sigmoid(mixsmooth * (x - 500.))
+        sigx = mixsmooth * x/100. - mixpoint
+        sig = 1. / (1 + tf.exp(-sigx))
         return lin0*sig + lin1*(1.-sig)
         
     
@@ -178,10 +179,11 @@ class DepletionFitter(object):
         #
         #exit()
         
-        #popt, _ = curve_fit(DoubleLinear(), x, y, p0=[-5, 0.1, 0., 1, 0.01])
+        #popt, _ = curve_fit(DoubleLinear(), x, y, p0=[-5, 0.1, -0.1, 1, .1, -.8],
+        #                    check_finite=True, )
         #dlin = DoubleLinear(*popt)
         #plt.plot(x,dlin(x))
-        #plt.plot(x,y)
+        #plt.plot(x,y,marker='o')
         #plt.show()
         #exit()
         

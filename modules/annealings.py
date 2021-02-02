@@ -30,9 +30,9 @@ class IvSet(object):
             raise ValueError("valtage array must have same size as IV array")
         return np.array([self.ivs[i].eval(x[i])[0] for i in range(len(x))], dtype='float')
 
-def getFullSet(diodestr, debugall=False,  debugdir=None, useIVGP=False):
+def getFullSet(diodestr, debugall=False,  debugdir=None, useIVGP=False, times = [10, 30, 73,103,153,247,378,645,1352,2919]):
 
-    globalpath="/Users/jkiesele/cern_afs/eos_hgsensor_testres/Results_SSD/CVIV/Diode_TS/"
+    globalpath=os.getenv("DATAPATH")+'/'
     
     x=[]
     y=[]
@@ -68,12 +68,21 @@ def getFullSet(diodestr, debugall=False,  debugdir=None, useIVGP=False):
     
     ########
     
-    for time in [73,103,153,247,378,645,1352,2919]:
+    for time in times:
+        
+        identifier="_UL_diode_big_ann_"
+        if time < 73 or time==74:
+            identifier="_UR_2D_diode_big_ann_"
+        if diodestr[0] == '3':
+            identifier="_UL_3D_diode_big_ann_"
+        
         thiscap = None
         if time >= 378:
             thiscap = const_cap
-        if time < 100:
+        if time < 74 and diodestr[0] == '1':
             thiscap = const_cap
+            if diodestr=='1102' and (time == 30):
+                thiscap=1.0359109408633843e+22
             
         rising=1.1
         if time==2919 and (diodestr=="2003" or diodestr=="2102" or diodestr=="1003"):
@@ -82,7 +91,7 @@ def getFullSet(diodestr, debugall=False,  debugdir=None, useIVGP=False):
             rising=1.5
             
             
-        v = getDepletionVoltage(globalpath+diodestr+"_UL_diode_big_ann_"+str(time)+"min/*.cv",min_x=-900,
+        v = getDepletionVoltage(globalpath+diodestr+identifier+str(time)+"min/*.cv",min_x=-900,
                             const_cap=thiscap,
                              rising=rising,
                              debug=debugall,debugfile=debugdir+diodestr+'_'+str(time))
@@ -95,7 +104,7 @@ def getFullSet(diodestr, debugall=False,  debugdir=None, useIVGP=False):
     
         print('Depletion voltage at',time, diodestr, 'is',v)
         
-        ivfit = fittedIV(globalpath,diodestr+"_UL_diode_big_ann_"+str(time)+"min/*.iv",
+        ivfit = fittedIV(globalpath,diodestr+identifier+str(time)+"min/*.iv",
                          debug=debugall,debugfile=debugdir+diodestr+'_'+str(time)+'iv',min_x=-900,
                          useGP=useIVGP)
         

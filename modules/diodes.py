@@ -20,14 +20,24 @@ class diode(object):
         self.thickness=thickness
         self.ann_offset=_pre_ann[rad]
         self.area=0.2595 # sensor area in cm2 
+        self.const_cap=0
         
-    def toNEff(self, Vdep, Cend):
+    def radstr(self):
+        return str("{:.1e}".format(self.rad))+" neq/cm$^2$"
+        
+    def label(self):
+        return self.no+', '+self.radstr()
+        
+    def toNEff(self, Vdep, Cend=None):
+        
+        if Cend is None:
+            Cend = self.const_cap
 
         eps0 = 8.85E-14 # F/cm
         eps = 11.9
         q0 = 1.60E-19 # Coulomb
         
-        return (Cend/SArea)*2 * 2*Vdep/(eps*eps0*q0)
+        return (Cend/self.area)*2 * 2*Vdep/(eps*eps0*q0)
 
 
 
