@@ -11,10 +11,11 @@ from plotting import curvePlotter
 
 from lmfit.models import LinearModel
 import sklearn.gaussian_process as gp
-
+from matplotlib import pyplot as plt
 import scipy.odr as odr
 import matplotlib.pyplot as plt
 
+import pickle
 
 class AnnealingFitter(object):
     def __init__(self):
@@ -132,7 +133,14 @@ class DepletionFitter(object):
     def __init__(self,  x=None, y=None, 
                  const_cap=None,
                  rising=2, constant=8,
-                 debugfile=None):
+                 debugfile=None,
+                 low_start=None,
+                 low_end=None,
+                 high_start=None,
+                 high_end=None,
+                 varcut=50):
+        
+        self.varcut=varcut
         self.data=None
         self.rising = rising
         self.constant = constant
@@ -142,6 +150,11 @@ class DepletionFitter(object):
             self.const_cap/=1e22
         if x is not None and y is not None:
             self._setData(x,y)
+            
+        self.low_start=low_start
+        self.low_end=low_end
+        self.high_start=high_start
+        self.high_end=high_end
         
     def _setData(self, x,y):
         #prepare only edges
@@ -165,55 +178,111 @@ class DepletionFitter(object):
         
     def _findcut(self):
         #simple comparison of average slope and current slope
+        
         x = self.data['x']
         y = self.data['y']
-        #import tensorflow as tf
-        #from scipy.optimize import minimize, SR1
-        #
-        #def func(arr):
-        #    ypred = DoubleLinear()(x,*arr)
-        #    return np.mean((y - ypred)**2)
-        #x0=[-5, 0.1, 0., 1, 0.01, -400]
-        #
-        #res = minimize( func, x0,  hess=SR1())
-        #
-        #exit()
         
-        #popt, _ = curve_fit(DoubleLinear(), x, y, p0=[-5, 0.1, -0.1, 1, .1, -.8],
-        #                    check_finite=True, )
-        #dlin = DoubleLinear(*popt)
-        #plt.plot(x,dlin(x))
-        #plt.plot(x,y,marker='o')
-        #plt.show()
-        #exit()
-        
+        outsel=[]
+        for s in [[self.low_start, self.low_end], [self.high_start,self.high_end]]:
+            defstart, defend = s[0],s[1]
+            thissel=[]
+            for var1 in [-self.varcut, 0, self.varcut]:
+                for var2 in [-self.varcut, 0, self.varcut]:
+                    start = defstart+var1
+                    end = defend+var2
+                    sel = np.logical_and(self.data['x'] >= start,self.data['x'] < end)
+                    thissel.append(sel)
+            outsel.append(thissel)
+             
+        return outsel   
+        #for lowstart in [self.low_start, self.low_start-self.varcut,self.low_start+self.varcut]:
+        #    for lowend in [self.low_start, self.low_start-self.varcut,self.low_start+self.varcut]:
         #
+        #constant = np.logical_and(self.data['x'] >= self.low_start,self.data['x'] < self.low_end)
+        #constup =     np.logical_and(self.data['x'] >= self.low_start+20,self.data['x'] < self.low_end+20)
+        #constdown = np.logical_and(self.data['x'] >= self.low_start-20,self.data['x'] < self.low_end-20)
+        #    
+        #rising = np.logical_and(self.data['x'] >= self.high_start,self.data['x'] < self.high_end)
+        #riseup
+        #risedown
         #
-        #
-        ##exit()
-        slope = self.data['slope']
-        avgslope = np.mean(np.abs(slope))
-        rising = np.abs(slope) > avgslope*self.rising
-        print('rising',slope[rising],'avg',avgslope)
-        constant = np.abs(slope)*self.constant < avgslope
-        print('constant',slope[constant])
-        return rising, constant
+        #return rising, constant, riseup, risedown, constup, constdown
        
     def _linear(self, x, a, b): 
         return a * x + b
     
-    def _dofit(self, debugplot=False):
+    def _dofit(self, debugplot=False, savedatapath=None):
+        #
+        # assume cuts
+        # fit lines, store
+        # get value, store
+        #
+        rise, cons = self._findcut()
+        #each [sela, selb, ...]
+        riselines=[]
+        conslines=[]
+        for srise in rise:
+            for scons in cons:
+                x = self.data['x'][srise]
+                y = self.data['y'][srise]
+                popt, _ = curve_fit(Linear(), x, y)
+                a, b = popt
+                line = Linear(a=a, b=b)
+                riselines.append(line)
+                
+                x = self.data['x'][scons]
+                y = self.data['y'][scons]
+                popt, _ = curve_fit(Linear(), x, y)
+                a, b = popt
+                line = Linear(a=a, b=b)
+                conslines.append(line)
+                
+        depl=[]
+        for r,c in zip(riselines,conslines):
+            depl.append(fsolve(lambda x : r(x) - c(x),-1000)[0])
+            
+        depl=np.array(depl)
+        nom,up,down = np.mean(depl), np.max(depl), np.min(depl)
+        print(nom,up,down)
+        
+        if debugplot:
+            plt.close()
+            plt.plot(self.data['x'],self.data['y'],marker='x')
+            for l in riselines+conslines:
+                plt.plot(self.data['x'],l(self.data['x']))
+            plt.xlabel("U [V]")
+            plt.ylabel("$1/C^2 [1/F^2]$")
+            plt.show()
+            
+        if savedatapath is not None:
+            d = {'depletion_nominal':nom,
+                 'depletion_up': up,
+                 'depletion_down': down,
+                 'riselines': riselines,
+                 'conslines': conslines,
+                 }
+            d.update(self.data)
+            
+            with open(savedatapath, 'wb')  as filehandler:
+                pickle.dump(d, filehandler)
+            
+            
+                
+        return nom,up,down
+            
+            
+        #############    
+            
         rise, cons = self._findcut()
         funcs=[]
         for r in [rise,cons]:
             x = self.data['x'][r]
             y = self.data['y'][r]
             
-            if len(x) < 5:
+            if len(x) < 3:
                 print(len(x))
                 raise ValueError("cut offs wrongly set")
             if debugplot:
-                from matplotlib import pyplot as plt
                 plt.plot(x,y,marker='x')
             
             popt, _ = curve_fit(Linear(), x, y)
@@ -226,8 +295,9 @@ class DepletionFitter(object):
                 funcs.append(Linear(a=0, b=self.const_cap))
                 break
             
+        self._smoothen()
         if debugplot:
-            from matplotlib import pyplot as plt
+            
             l0,l1 = funcs
             print('cap:' ,l1.getB())
             plt.close()
@@ -244,9 +314,80 @@ class DepletionFitter(object):
         
         return funcs
             
-    def getDepletionVoltage(self,debugplot=False):
-        l0,l1 = self._dofit(debugplot)
-        return fsolve(lambda x : l0(x) - l1(x),-1000)[0]
+    def getDepletionVoltage(self,debugplot=False, withunc=False, savedatapath=None):
+        if withunc:
+            return self._dofit(debugplot=debugplot,savedatapath=savedatapath)
+        return self._dofit(debugplot=debugplot,savedatapath=savedatapath)[0]
+    
+    def _smoothen(self):
+        return
+        from scipy.interpolate import interp1d
+        from scipy.misc import derivative
+        
+        plt.close()
+        x = self.data['x']
+        y = self.data['y']
+        from scipy.signal import savgol_filter
+        yhat = savgol_filter(y, 5,3)
+        plt.plot(x,y,marker='x')
+        plt.plot(x,yhat,label='smooth')
+        
+        f2 = interp1d(x, yhat, kind='cubic')
+        xnew = np.arange(x[-1],x[0],1)
+        xnew = xnew[xnew < -30]
+        ynew = f2(xnew)
+        plt.plot(xnew,ynew,label='interp')
+        plt.legend()
+        #plt.show()
+
+        #add skew
+        #ynew = ynew + xnew*np.max(ynew)/1000
+        plt.twinx()
+        plt.plot(xnew, ynew,label='C')
+        #plt.show()
+        dxdy = np.gradient(ynew,xnew)
+        dxdy = savgol_filter(dxdy, 101,4)
+        plt.twinx()  
+        
+        #select only upper part
+        
+        
+        plt.plot(xnew, dxdy,label='d')
+        plt.twinx()
+        ddxdy = np.gradient(dxdy,xnew)
+        plt.twinx()
+        plt.plot(xnew, ddxdy,label='dd')
+        
+        #get first minimum from the left
+        minidx = self._getfirstmin(ddxdy)
+        xmin = [xnew[minidx],xnew[minidx]]
+        yminmax = [np.min(ddxdy),np.max(ddxdy)]
+        plt.plot(xmin,yminmax)
+        
+        #dxdyhat = savgol_filter(dxdy, 1001,2)
+        #plt.plot(xnew, dxdyhat,label='dds')
+        #plt.twinx()
+        plt.legend()
+        plt.show()
+        
+    def _getfirstmin(self,y):
+        min=1e9
+        minidx=0
+        idx=0
+        for yy in y:
+            if yy < min:
+                min=yy
+                minidx=idx
+            idx+=1
+            prev=yy
+        return minidx
+    
+
+class DepletionFitterInflect(object):
+    def __init__(self):
+        pass
+    
+    
  
  
 class PolFitter(object):

@@ -12,15 +12,25 @@ def getDepletionVoltage(filename, debug=True,
                         const_cap=None,
                         rising=1, constant=8,
                         min_x=None,max_x=None,
-                        debugfile=None):
+                        debugfile=None,
+                        low_start  =None,
+                        low_end = None,
+                        high_start=None,
+                        high_end =None,
+                        savedatapath=None
+                        ):
     pl = curvePlotter(mode="CVs")
     pl.addPlotFromFile(filename, min_x=min_x,max_x=max_x, noplot=True)
     
     df = DepletionFitter(x=pl.x, y=pl.y, 
                  const_cap=const_cap,
                  rising=rising, constant=constant,
-                 debugfile=debugfile)
-    v = df.getDepletionVoltage(debugplot=debug)
+                 debugfile=debugfile,
+                 low_start  =low_start,
+                        low_end = low_end,
+                        high_start=high_start,
+                        high_end =high_end)
+    v = df.getDepletionVoltage(debugplot=debug,savedatapath=savedatapath)
     return v
 
 
