@@ -17,7 +17,10 @@ def getDepletionVoltage(filename, debug=True,
                         low_end = None,
                         high_start=None,
                         high_end =None,
-                        savedatapath=None
+                        savedatapath=None,
+                        variation=10,
+                        strictcheck=True,
+                        interactive=False
                         ):
     pl = curvePlotter(mode="CVs")
     pl.addPlotFromFile(filename, min_x=min_x,max_x=max_x, noplot=True)
@@ -29,7 +32,10 @@ def getDepletionVoltage(filename, debug=True,
                  low_start  =low_start,
                         low_end = low_end,
                         high_start=high_start,
-                        high_end =high_end)
+                        high_end =high_end,
+                        varcut=variation,
+                        strictcheck=strictcheck,
+                        interactive=interactive)
     v = df.getDepletionVoltage(debugplot=debug,savedatapath=savedatapath)
     return v
 

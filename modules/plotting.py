@@ -50,6 +50,13 @@ class curvePlotter(object):
             if self.mode=='IV':
                 y=-y
             self.plt.plot(-x,y, **kwargs)
+            
+    def getXY(self):
+        return self.x, self.y
+    
+    def getXYSmooth(self):
+        from fitting import smoothen
+        return smoothen(self.x,self.y)
         
     def labelAxes(self):
         self.plt.xlabel("-U [V]")

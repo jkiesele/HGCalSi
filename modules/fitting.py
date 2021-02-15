@@ -14,8 +14,22 @@ import sklearn.gaussian_process as gp
 from matplotlib import pyplot as plt
 import scipy.odr as odr
 import matplotlib.pyplot as plt
-
+from scipy.signal import savgol_filter
 import pickle
+
+
+
+def smoothen(x,y):
+    from scipy.interpolate import interp1d
+    
+    ysmooth = savgol_filter(y, 5,3)
+    f2 = interp1d(x, ysmooth, kind='cubic')
+    xint = np.arange(x[-1],x[0],1)
+    #flip?
+    yint = f2(xint)
+    
+    return xint, yint
+ 
 
 class AnnealingFitter(object):
     def __init__(self):
@@ -127,6 +141,12 @@ class DoubleLinear(object):
         sig = 1. / (1 + tf.exp(-sigx))
         return lin0*sig + lin1*(1.-sig)
         
+
+def readDepletionData(directory, file="extracted.dv"):
+    import os
+    allpath = os.path.join(directory,file)
+    with open(allpath, 'rb')  as filehandler:
+        return pickle.load(filehandler)
     
  
 class DepletionFitter(object):
@@ -138,16 +158,17 @@ class DepletionFitter(object):
                  low_end=None,
                  high_start=None,
                  high_end=None,
-                 varcut=50):
+                 varcut=10,
+                 strictcheck=True,
+                 interactive=False):
         
         self.varcut=varcut
+        self.strictcheck=strictcheck
         self.data=None
         self.rising = rising
         self.constant = constant
         self.const_cap = const_cap
         self.debugfile = debugfile
-        if self.const_cap is not None:
-            self.const_cap/=1e22
         if x is not None and y is not None:
             self._setData(x,y)
             
@@ -155,6 +176,19 @@ class DepletionFitter(object):
         self.low_end=low_end
         self.high_start=high_start
         self.high_end=high_end
+        
+        self.interactive=interactive
+        
+        #save info
+        self.data.update(
+            {'low_start': low_start,
+             'low_end': low_end,
+             'high_start': high_start,
+             'high_end': high_end,
+             'varcut': varcut,
+             'const_cap': const_cap
+             }
+            )
         
     def _setData(self, x,y):
         #prepare only edges
@@ -176,21 +210,42 @@ class DepletionFitter(object):
                    'x': x,
                    'y': y}
         
+        self._smoothen()
+        
+    def _checkchange(self,c):
+        delta = abs(self.data['x'][0]-self.data['x'][1])#min one point distance
+        if not self.strictcheck:
+            return c
+        if not c == 0 and delta > abs(c):
+            if c>0:
+                c=delta
+            else:
+                c=-delta
+        return c
+        
     def _findcut(self):
         #simple comparison of average slope and current slope
         
-        x = self.data['x']
-        y = self.data['y']
+        
+        x = self.data['x_smooth']
+        #y = self.data['y_smooth']
+        
+        #create smoothed data here
         
         outsel=[]
         for s in [[self.low_start, self.low_end], [self.high_start,self.high_end]]:
             defstart, defend = s[0],s[1]
             thissel=[]
-            for var1 in [-self.varcut, 0, self.varcut]:
-                for var2 in [-self.varcut, 0, self.varcut]:
-                    start = defstart+var1
-                    end = defend+var2
-                    sel = np.logical_and(self.data['x'] >= start,self.data['x'] < end)
+            for var1 in [0, -self.varcut, self.varcut]:
+                for var2 in [ 0, -self.varcut, self.varcut]:
+                    
+                    change1 = abs(defstart-defend)*(var1/100.)
+                    change2 = abs(defstart-defend)*(var2/100.)
+                    
+                    start = defstart + self._checkchange(change1)
+                    end = defend + self._checkchange(change2)
+                    
+                    sel = np.logical_and(x >= start, x < end)
                     thissel.append(sel)
             outsel.append(thissel)
              
@@ -217,21 +272,28 @@ class DepletionFitter(object):
         # fit lines, store
         # get value, store
         #
-        rise, cons = self._findcut()
+        cons,rise = self._findcut()
         #each [sela, selb, ...]
         riselines=[]
         conslines=[]
         for srise in rise:
             for scons in cons:
-                x = self.data['x'][srise]
-                y = self.data['y'][srise]
+                x = self.data['x_smooth'][srise]
+                y = self.data['y_smooth'][srise]
                 popt, _ = curve_fit(Linear(), x, y)
                 a, b = popt
                 line = Linear(a=a, b=b)
                 riselines.append(line)
                 
-                x = self.data['x'][scons]
-                y = self.data['y'][scons]
+                if self.const_cap is not None and self.const_cap > 0:
+                    #print('using constant ',self.const_cap)
+                    conslines.append(Linear(a=0., b=self.const_cap/1e22))
+                    conslines.append(Linear(a=0., b=self.const_cap*(1.-0.002*self.varcut)/1e22))
+                    conslines.append(Linear(a=0., b=self.const_cap*(1.+0.002*self.varcut)/1e22))
+                    continue
+                
+                x = self.data['x_smooth'][scons]
+                y = self.data['y_smooth'][scons]
                 popt, _ = curve_fit(Linear(), x, y)
                 a, b = popt
                 line = Linear(a=a, b=b)
@@ -242,17 +304,25 @@ class DepletionFitter(object):
             depl.append(fsolve(lambda x : r(x) - c(x),-1000)[0])
             
         depl=np.array(depl)
-        nom,up,down = np.mean(depl), np.max(depl), np.min(depl)
+        nom,up,down = depl[0], np.max(depl), np.min(depl)
         print(nom,up,down)
         
         if debugplot:
             plt.close()
-            plt.plot(self.data['x'],self.data['y'],marker='x')
+            plt.plot(self.data['x'],self.data['y'],marker='x',linewidth=None,label='data')
+            plt.plot(self.data['x_smooth'],self.data['y_smooth'],label='smoothened')
+            plt.legend()
             for l in riselines+conslines:
-                plt.plot(self.data['x'],l(self.data['x']))
+                plt.plot(self.data['x'],l(self.data['x']),linewidth=0.5)
             plt.xlabel("U [V]")
             plt.ylabel("$1/C^2 [1/F^2]$")
-            plt.show()
+            plt.ylim([np.min(self.data['y'])/1.1, np.max(self.data['y'])*1.2])
+            fig = plt.gcf()
+            if savedatapath is not None:
+                fig.savefig(savedatapath+'_fig.pdf')
+            if self.interactive:
+                plt.show()
+            
             
         if savedatapath is not None:
             d = {'depletion_nominal':nom,
@@ -320,67 +390,13 @@ class DepletionFitter(object):
         return self._dofit(debugplot=debugplot,savedatapath=savedatapath)[0]
     
     def _smoothen(self):
-        return
-        from scipy.interpolate import interp1d
-        from scipy.misc import derivative
-        
-        plt.close()
         x = self.data['x']
         y = self.data['y']
-        from scipy.signal import savgol_filter
-        yhat = savgol_filter(y, 5,3)
-        plt.plot(x,y,marker='x')
-        plt.plot(x,yhat,label='smooth')
-        
-        f2 = interp1d(x, yhat, kind='cubic')
-        xnew = np.arange(x[-1],x[0],1)
-        xnew = xnew[xnew < -30]
-        ynew = f2(xnew)
-        plt.plot(xnew,ynew,label='interp')
-        plt.legend()
-        #plt.show()
-
-        #add skew
-        #ynew = ynew + xnew*np.max(ynew)/1000
-        plt.twinx()
-        plt.plot(xnew, ynew,label='C')
-        #plt.show()
-        dxdy = np.gradient(ynew,xnew)
-        dxdy = savgol_filter(dxdy, 101,4)
-        plt.twinx()  
-        
-        #select only upper part
+        xint,yint = smoothen(x, y)
+        self.data['x_smooth']=xint
+        self.data['y_smooth']=yint
         
         
-        plt.plot(xnew, dxdy,label='d')
-        plt.twinx()
-        ddxdy = np.gradient(dxdy,xnew)
-        plt.twinx()
-        plt.plot(xnew, ddxdy,label='dd')
-        
-        #get first minimum from the left
-        minidx = self._getfirstmin(ddxdy)
-        xmin = [xnew[minidx],xnew[minidx]]
-        yminmax = [np.min(ddxdy),np.max(ddxdy)]
-        plt.plot(xmin,yminmax)
-        
-        #dxdyhat = savgol_filter(dxdy, 1001,2)
-        #plt.plot(xnew, dxdyhat,label='dds')
-        #plt.twinx()
-        plt.legend()
-        plt.show()
-        
-    def _getfirstmin(self,y):
-        min=1e9
-        minidx=0
-        idx=0
-        for yy in y:
-            if yy < min:
-                min=yy
-                minidx=idx
-            idx+=1
-            prev=yy
-        return minidx
     
 
 class DepletionFitterInflect(object):
