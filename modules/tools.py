@@ -6,7 +6,27 @@ from plotting import curvePlotter
 from matplotlib import pyplot as plt
 import os
 from fitting import DepletionFitter
+from diodes import diodes
 
+
+def convert60Cto21C(t):
+    return t* 390966.6/1000.
+
+def convert21CTo0C(t):
+    return t*100000./2409.9
+
+def convert60CTo0C(t):
+    t = convert60Cto21C(t)
+    return convert21CTo0C(t)
+
+
+def getDiodeAndTime(dirpath):
+    d=diodes[dirpath[:4]]
+    time=0
+    if dirpath[-3:] == "min":
+        offs = dirpath.rfind('_')
+        time= float(dirpath[offs+1:-3])
+    return d, time
 
 def getDepletionVoltage(filename, debug=True,
                         const_cap=None,

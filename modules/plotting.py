@@ -17,21 +17,34 @@ def convertToCs(Cp, kappa, freq=10000):
 
     
 class curvePlotter(object):
-    def __init__(self, mode, path=""):
+    def __init__(self, mode, path="", read_freq=False):
         assert mode == "CV" or mode == "IV" or mode=="CVs" or mode == 'IVGR'
         self.mode=mode
         self.plt=plt
         self.x=None
         self.y=None
+        self.read_freq=read_freq
         if mode=="CVs":
             mode="CV"
-        self.fileReader=fileReader(mode=mode, path=path)
+        self.fileReader=fileReader(mode=mode, path=path,return_freq=read_freq)
         if self.mode == "IVGR":
             self.mode="IV"
         
+        assert ( read_freq and ( mode=="CVs" or mode=="CV" ) ) or not read_freq
+        
+    def readFreq(self,infile):
+        if not self.read_freq:
+            return None
+        _,_,_, freq = self.fileReader.read(infile)
+        return freq
         
     def addPlotFromFile(self,infile, selection=None, min_x=None,max_x=None, noplot=False, **kwargs):
-        x,y,k = self.fileReader.read(infile)
+        x,y,k = None, None, None
+        freq = 0
+        if self.read_freq:
+            x,y,k, freq = self.fileReader.read(infile)
+        else:
+            x,y,k = self.fileReader.read(infile)
         if self.mode == "CVs":
             y=convertToCs(y,k)
             y=1/y**2
@@ -50,6 +63,9 @@ class curvePlotter(object):
             if self.mode=='IV':
                 y=-y
             self.plt.plot(-x,y, **kwargs)
+            
+        return freq
+        
             
     def getXY(self):
         return self.x, self.y

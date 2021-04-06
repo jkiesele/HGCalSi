@@ -2,6 +2,8 @@
 
 from argparse import ArgumentParser
 import os
+import numpy as np
+import math
 parser = ArgumentParser()
 parser.add_argument('inputDir')
 parser.add_argument('number', default="-1")
@@ -24,6 +26,9 @@ cv_plotter = curvePlotter(mode="CVs",path=globalpath)
 cv_plotter.addPlotFromFile(args.inputDir+"/*"+no+".cv",
                                label="test")
 
+x,y = cv_plotter.getXYSmooth()
+maxidx  = np.argmax(y)
+print('max 1/C**2', y[maxidx], 'end capacitance: ', math.sqrt(1./y[maxidx]))
 plt.show()
 plt.close()
 

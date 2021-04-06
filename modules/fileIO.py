@@ -13,7 +13,7 @@ def readTempLog(filename, calib=False, readLast=True):
     x=[]
     y=[]
     z=[]
-    with open(filename) as file:
+    with open(filename,'r') as file:
         for line in file:
             if len(line) < 1:
                 continue
@@ -38,9 +38,10 @@ def readTempLog(filename, calib=False, readLast=True):
 
 
 class fileReader(object):
-    def __init__(self, mode="CV", path=""):
+    def __init__(self, mode="CV", path="", return_freq=False):
         self.mode=mode
         self.path=path
+        self.return_freq=return_freq
         
     
     def readCV(self,filename):
@@ -50,7 +51,10 @@ class fileReader(object):
         V=[]
         C=[]
         kappa=[]
+        freq=0
         for line in lines:
+            if line[:13] == "- Frequency: ":
+                freq = int(line.split(' ')[2])
             if fill==True:
                 if line == 'END': break
                 info = line.split('\t')
@@ -59,7 +63,9 @@ class fileReader(object):
                 kappa.append(float(info[2]))
         
             if line == 'BEGIN': fill = True
-        
+            
+        if self.return_freq:
+            return np.array(V),np.array(C),np.array(kappa) ,freq 
         return np.array(V),np.array(C),np.array(kappa)
     
     def readIV(self,filename,GR=False):

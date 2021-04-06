@@ -160,7 +160,9 @@ class DepletionFitter(object):
                  high_end=None,
                  varcut=10,
                  strictcheck=True,
-                 interactive=False):
+                 interactive=False,
+                 addextracuncat=-1000,
+                 extraunc=10.):
         
         self.varcut=varcut
         self.strictcheck=strictcheck
@@ -169,6 +171,8 @@ class DepletionFitter(object):
         self.constant = constant
         self.const_cap = const_cap
         self.debugfile = debugfile
+        self.addextracuncat=addextracuncat
+        self.extraunc=extraunc
         if x is not None and y is not None:
             self._setData(x,y)
             
@@ -301,14 +305,18 @@ class DepletionFitter(object):
                 
         depl=[]
         for r,c in zip(riselines,conslines):
-            depl.append(fsolve(lambda x : r(x) - c(x),-1000)[0])
+            vdep  = fsolve(lambda x : r(x) - c(x),-1000)[0]
+            depl.append(vdep)
+            if vdep < self.addextracuncat:
+                depl.append(vdep+(vdep-self.addextracuncat)*(self.extraunc/100.))
+                depl.append(vdep-(vdep-self.addextracuncat)*(self.extraunc/100.))
             
         depl=np.array(depl)
         nom,up,down = depl[0], np.max(depl), np.min(depl)
         print(nom,up,down)
         
         if debugplot:
-            plt.close()
+            #plt.close()
             plt.plot(self.data['x'],self.data['y'],marker='x',linewidth=None,label='data')
             plt.plot(self.data['x_smooth'],self.data['y_smooth'],label='smoothened')
             plt.legend()
@@ -370,7 +378,7 @@ class DepletionFitter(object):
             
             l0,l1 = funcs
             print('cap:' ,l1.getB())
-            plt.close()
+            #plt.close()
             plt.plot(self.data['x'],self.data['y'])
             plt.plot(self.data['x'],l0(self.data['x']))
             plt.plot(self.data['x'],l1(self.data['x']))
