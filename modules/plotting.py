@@ -5,13 +5,17 @@ from fileIO import fileReader
 #from tools import convertToCs        
 import math
 
-def convertToCs(Cp, kappa, freq=10000):
+def convertToCs(Cp, G, freq=10000):
 
     #Cp=np.abs(Cp)
     #kappa=np.abs(kappa)
-    omega = math.pi * freq
-    Rp = 1/kappa 
+    omega = 2. * math.pi * freq
+    Rp = 1/G 
     Cs = (1. + omega**2 * Rp**2 * Cp**2)/(omega**2 * Rp**2 * Cp)
+    
+    #same :
+    Cs = (G**2 + omega**2 * Cp**2)/(omega**2 * Cp)
+    
     return Cs
 
 
@@ -40,13 +44,13 @@ class curvePlotter(object):
         
     def addPlotFromFile(self,infile, selection=None, min_x=None,max_x=None, noplot=False, **kwargs):
         x,y,k = None, None, None
-        freq = 0
+        freq = 10000
         if self.read_freq:
             x,y,k, freq = self.fileReader.read(infile)
         else:
             x,y,k = self.fileReader.read(infile)
         if self.mode == "CVs":
-            y=convertToCs(y,k)
+            y=convertToCs(y,k,freq)
             y=1/y**2
         if self.mode == "CV":
             y=1/y**2
