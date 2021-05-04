@@ -47,6 +47,10 @@ if args.rederive or (not os.path.isfile(outpath+args.outfile+".depl") and not ar
     cv_plotter.addPlotFromFile(args.inputDir+"/*.cv",
                                    label="test")
     
+    
+    print('fit rising edge from to (positive)')
+    print('fit constant from to')
+    print('constant value (if any)')
     cv_plotter.showPlot()
     print('fit rising edge from to (positive)')
     print('fit constant from to')
