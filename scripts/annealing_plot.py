@@ -3,7 +3,7 @@
 import os
 import styles
 import matplotlib.pyplot as plt
-from tools import convert60Cto21C
+from tools import convert60CTo0C
 
 from pointset import pointSetsContainer, pointSet, loadAnnealings
 
@@ -16,9 +16,9 @@ def cosmetics(x,ylabel="-$U_{depl}$ [V]"):
     plt.xlabel("time (60˚C) [min]", fontsize=12)
     plt.ylabel(ylabel, fontsize=12)
     
-    def minat60ToDaysAt21(t):
-        return convert60Cto21C(t/(60*24.))
-    styles.addModifiedXAxis(x, minat60ToDaysAt21, "time (21˚C) [d]")
+    def minat60ToDaysAt0(t):
+        return convert60CTo0C(t/(60*24.))
+    styles.addModifiedXAxis(x, minat60ToDaysAt0, "time (0˚C) [d]")
     plt.xscale('log')
     
     plt.tight_layout()
@@ -77,7 +77,7 @@ plt.savefig(datadir+"/annealing_plots/300.pdf")
 
 
 plt.close()
-pointsets.addToPlot("Udep", ["2002_UL","2003_UL","2102_UL"],
+pointsets.addToPlot("Udep", ["2002_UL","2003_UL","2102_UL","2102_LR"],
                     #colors=['tab:blue','tab:green','tab:orange']
                     colors='fluence',
                     )
