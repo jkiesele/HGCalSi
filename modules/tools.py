@@ -28,7 +28,8 @@ def convert60CTo15C(t):
 
 def convert60CTom30C(t):
     t = convert60Cto21C(t)
-    return t*10e6/265.9
+    return t* 1e6/23.
+
 
 
 def getDiodeAndTime(dirpath):
