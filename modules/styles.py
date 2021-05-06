@@ -25,5 +25,6 @@ def addModifiedXAxis(xs, func,  label):
     ax.cla()
     ax.set_xlim(func(lims))
     ax.set_xlabel(label)
+    return ax
     
     

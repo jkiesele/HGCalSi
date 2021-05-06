@@ -19,6 +19,17 @@ def convert60CTo0C(t):
     t = convert60Cto21C(t)
     return convert21CTo0C(t)
 
+def convert21CTo15C(t):
+    return t*1000./349.8
+
+def convert60CTo15C(t):
+    t = convert60Cto21C(t)
+    return convert21CTo15C(t)
+
+def convert60CTom30C(t):
+    t = convert60Cto21C(t)
+    return t*10e6/265.9
+
 
 def getDiodeAndTime(dirpath):
     d=diodes[dirpath[:4]]

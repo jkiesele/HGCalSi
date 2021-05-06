@@ -268,8 +268,6 @@ def loadAnnealings():
     pointsets.append(pointSet("3008_UL",[0,10,30,74, 103, 149,243, 386, 639, 1536]))
     
     
-    pointsets.append(pointSet("2102_LR",[10]))
-    
     return pointsets, kneepointset
     
     

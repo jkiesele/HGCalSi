@@ -6,7 +6,7 @@ import styles
 import numpy as np
 from tools import convert60CTo0C
 import scipy.odr as odr
-
+import math
 from pointset import pointSetsContainer, pointSet, loadAnnealings
 
 datadir=os.getenv("DATAOUTPATH")
@@ -21,6 +21,19 @@ os.system('mkdir -p '+outdir)
                 'y':y,
                 'yerr':yerr
                 '''
+
+
+def alpha_dep_theo(t):
+    t0=1#t0[0]
+    T=60
+    a1 = 1.26e-17
+    tau = 94.
+    a0 = 4.87e-17
+    b = 3.16e-18
+    
+    return a1*np.exp(-t/tau)+ a0 - b * np.log(t/t0)
+    
+    
 
 def symmetrize(errup,errdown):
     
@@ -53,11 +66,11 @@ def findClosestTime(dataarr, anntime, allowederr):
 #get all data
 pointsets, kneepointset= loadAnnealings()
 
-fitmode='onlyFZ'
+fitmode='all'
 
-for fitmode in ( 'onlyFZ', 'all'):
-    
-    U="Udep"
+#for fitmode in ( 'onlyFZ', 'all'):
+for U in (-600, -800, "Udep"):    
+    #U="Udep"
     allalphas=[]
     allalphaerrs=[]
     allts=[]
@@ -126,7 +139,7 @@ for fitmode in ( 'onlyFZ', 'all'):
         plt.ylabel("I("+voltstring+")/Volume [A/cm$^3$] @ -20˚C", fontsize=12)
         
         #print(minx)
-        plt.plot([minx,maxx],EstebansLine(minx,maxx),label='TDR DD, 80 min @ 60˚C',linestyle='--')
+        plt.plot([minx,maxx],EstebansLine(minx,maxx),label='TDR DD, 10 min @ 60˚C',linestyle='--')
         
         #create fit data
         fitdata=None
@@ -179,17 +192,29 @@ for fitmode in ( 'onlyFZ', 'all'):
     if len(allalphas):
         print(U)
         plt.errorbar(allts, allalphas,  yerr=allalphaerrs, xerr=allterr,
-                         marker='o',linewidth=0,elinewidth=2.)#,markersize=2.)
+                         marker='o',linewidth=0,elinewidth=2.,
+                         label='8"')#,markersize=2.)
+        
+        #estebans fit?
+        plt.errorbar([10], [7.675], yerr=[0.2], xerr=[0.], marker='x',linewidth=0,elinewidth=2.,
+                         label='6" DD (TDR)')
         
         plt.xlabel('t @ 60˚C [min]')
         plt.ylabel(r'$\alpha$ [$10^{-19}$ A/cm]')
+        
+        
+        thvals = alpha_dep_theo(np.arange(10,700))
+        #print(thvals)
+        #plt.plot(np.arange(10,700), thvals, linestyle='--')
+        plt.legend()
         def minat60ToDaysAt0(t):
             return convert60CTo0C(t/(60*24.))
         styles.addModifiedXAxis(allts, minat60ToDaysAt0, "time (0˚C) [d]")
-        plt.ylim([5,7.5])
+        plt.ylim([5,8.5])
         #plt.xscale('log')
     
         plt.tight_layout()
+        
         
         plt.savefig(outdir+"ann_alpha_"+str(U)+"_"+fitmode+".pdf")
         plt.close()
