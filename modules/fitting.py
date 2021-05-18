@@ -33,76 +33,97 @@ def smoothen(x,y):
 
 class AnnealingFitter(object):
     def __init__(self):
-        self.a=None
-        self.tau_0=None
-        self.N_c =None
-        self.N_Yinf = None
-        self.tau_y=None
+        self._a=1.
+        self._tau_0=0.1
+        self._N_c =3.
+        self._N_Yinf = 1.
+        self._tau_y=8.
         
-        self.scalex=100.
-        self.scaley=100.
+        self.scalex=1000.
+        self.scaley=1e13
         
     def _DNeff(self, B, t):
         a, tau_0, N_c, N_Yinf, tau_y = B
-        return a*np.exp(- t/self.scalex/tau_0) + N_c + N_Yinf * ( 1. - 1./(1.+t/self.scalex/tau_y))
-       
-    def __DNeff(self, t, a, tau_0, N_c, N_Yinf, tau_y):
-        return a*np.exp(- t/self.scalex/tau_0) + N_c + N_Yinf * ( 1. - 1./(1.+t/self.scalex/tau_y))
-       
+        a, tau_0, N_c, N_Yinf, tau_y = np.abs(a), np.abs(tau_0), np.abs(N_c), np.abs(N_Yinf), np.abs(tau_y)
+        return self.scaley*(a*np.exp(- t/self.scalex/tau_0) + N_c + N_Yinf * ( 1. - 1./(1.+t/self.scalex/tau_y)))
        
     def DNeff(self, t):
         if not len(t):
             t=np.array(t)
-        return self.a*np.exp(- t/self.scalex/self.tau_0) + self.N_c + self.N_Yinf * ( 1. - 1./(1.+t/self.scalex/self.tau_y))
-
+        return self.a*np.exp(- t/self.tau_0) + self.N_c + self.N_Yinf * ( 1. - 1./(1.+t/self.tau_y))
+        #return self._DNeff( (self._a, self._tau_0, self._N_c, self._N_Yinf, self._tau_y), t)
+    
+    @property    
+    def a(self):
+        return abs(self._a)*self.scaley
+    @property
+    def tau_0(self):
+        return self.scalex*abs(self._tau_0)
+    @property
+    def N_c(self):
+        return self.scaley*abs(self._N_c)
+    @property
+    def N_Yinf(self):
+        return abs(self._N_Yinf)*self.scaley
+    @property
+    def tau_y(self):
+        return abs(self._tau_y)*self.scalex
 
     def fit(self, x, y, xerr, yerr=None):
+        x = np.array(x)
+        y = np.array(y)
+        xerr = np.array(xerr)
+        if yerr is not None:
+            yerr = np.array(yerr)
         
         if True:
             m = odr.Model(self._DNeff)
             if yerr is None:
                 yerr = y/1000.
+            #print(x, y, xerr, yerr)
             mydata = odr.RealData(x, y, sx=xerr, sy=yerr)
-            myodr = odr.ODR(mydata, m, beta0=[ 2.37213506e+02 , 
-                                               3.45510553e-01 ,
-                                               1.96604468e+02 ,
-                                               -5.23269275e+06,
-                                               -1.91549327e+05])
+            myodr = odr.ODR(mydata, m, beta0=np.array([self._a, self._tau_0, self._N_c, self._N_Yinf, self._tau_y]))
+            out=myodr.run()
             out=myodr.run()
             #print(out)
             popt = out.beta
-            self.a=popt[0]
-            self.tau_0=popt[1]
-            self.N_c =popt[2]
-            self.N_Yinf = popt[3]
-            self.tau_y=popt[4]
+            self._a=popt[0]
+            self._tau_0=popt[1]
+            self._N_c =popt[2]
+            self._N_Yinf = popt[3]
+            self._tau_y=popt[4]
+            
+            print('a',self.a)
+            print('tau_0',self.tau_0)
+            print('N_c',self.N_c)
+            print('tau_y',self.tau_y)
         
             return
         
         popt, _ = curve_fit(self.__DNeff, x, y)
         print(popt)
-        self.a=popt[0]
-        self.tau_0=popt[1]
-        self.N_c =popt[2]
-        self.N_Yinf = popt[3]
-        self.tau_y=popt[4]
+        self._a=popt[0]
+        self._tau_0=popt[1]
+        self._N_c =popt[2]
+        self._N_Yinf = popt[3]
+        self._tau_y=popt[4]
         
         
     
 
 class Linear(object):
     def __init__(self, a=None,b=None):
-        self.a=a 
+        self._a=a 
         self.b=b 
         
     def __call__(self,x,a=None,b=None):
         if a is None and b is None:
-            return 1e19*self.a*(x/10 + 9) + self.b*1e22
+            return 1e19*self._a*(x/10 + 9) + self.b*1e22
         else:
             return 1e19*a*(x/10 + 9) + b*1e22
         
     def getA(self):
-        return 1e19*self.a
+        return 1e19*self._a
     
     def getB(self):
         return 1e22*self.b
@@ -509,8 +530,8 @@ class fittedIV(object):
   
         
 ## define the true objective function
-#def objective(x, a, b):
-#    return a * x + b
+#def objective(x, _a, b):
+#    return _a * x + b
 # 
 ## load the dataset
 #url = 'https://raw.githubusercontent.com/jbrownlee/Datasets/master/longley.csv'
@@ -521,15 +542,15 @@ class fittedIV(object):
 ## curve fit
 #popt, _ = curve_fit(objective, x, y)
 ## summarize the parameter values
-#a, b = popt
-#print('y = %.5f * x + %.5f' % (a, b))
+#_a, b = popt
+#print('y = %.5f * x + %.5f' % (_a, b))
 ## plot input vs output
 #pyplot.scatter(x, y)
-## define a sequence of inputs between the smallest and largest known inputs
+## define _a sequence of inputs between the smallest and largest known inputs
 #x_line = arange(min(x), max(x), 1)
 ## calculate the output for the range
-#y_line = objective(x_line, a, b)
-## create a line plot for the mapping function
+#y_line = objective(x_line, _a, b)
+## create _a line plot for the mapping function
 #pyplot.plot(x_line, y_line, '--', color='red')
 #pyplot.show()
 #

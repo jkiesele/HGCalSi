@@ -58,6 +58,8 @@ class diode(object):
         eps = 11.9
         q0 = 1.60E-19 # Coulomb
         
+        return 2*eps*eps0 / q0 * Vdep/(self.thickness / 1000. / 10.)**2
+        
         return (Cend/self.area)**2 * 2*Vdep/(eps*eps0*q0)
     
     def NEffFromSlope(self,slope):

@@ -205,7 +205,7 @@ class pointSetsContainer(object):
                 })
         return xyerss
         
-    def addToPlot(self,mode, whichsets,add=[],marker='o',colors=None,linestyle='',linewidth=None,current_at=None):
+    def addToPlot(self,mode, whichsets,add=[],marker='o',colors=None,linestyle='',linewidth=None,current_at=None, add_rel_y_unc=None):
         while len(add) < len(whichsets):
             add.append("")
         if colors is not None and colors == 'fluence':
@@ -219,6 +219,10 @@ class pointSetsContainer(object):
         for aset,addstr,c in zip(whichsets,add,colors):
             ps = self.pointsets[aset]
             x,xerr,y,yerr = ps.getXYs(mode,current_at)
+            if add_rel_y_unc is not None:
+                yerr = np.array(yerr)
+                yerr = np.sign(yerr)*np.sqrt( yerr**2 + (np.expand_dims(y,axis=0)*add_rel_y_unc)**2 )
+                
             plt.errorbar(x, y,  yerr=yerr, xerr=xerr,label=ps.diode().label()+addstr,
                          linewidth=linewidth,marker=marker,linestyle=linestyle,
                          color=c)

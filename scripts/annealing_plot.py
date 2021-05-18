@@ -4,7 +4,7 @@ import os
 import styles
 import matplotlib.pyplot as plt
 from tools import convert60CTo0C, convert60CTom30C, convert60CTo15C, convert60Cto21C
-
+import numpy as np
 from pointset import pointSetsContainer, pointSet, loadAnnealings
 
 datadir=os.getenv("DATAOUTPATH")
@@ -71,6 +71,112 @@ def cosmetics(x, ax, ylabel="-$U_{depl}$ [V]"):
     
 
 pointsets, kneepointset= loadAnnealings()
+
+
+
+
+
+'''
+["3007_UL","2102_UL","2102_UR",
+             "3008_UL","2003_UL","2003_UR","1102_UL", "1102_UR",
+             "2002_UL","2002_UR","1003_UL","1003_UR",
+             "3003_UL"]:
+'''
+
+
+from fitting import AnnealingFitter
+
+
+
+
+def addfitted(dstr):
+
+    fitter = AnnealingFitter()
+    xyerssdatas = pointsets.getXYsDiodes("NEff",dstr)
+    '''
+    'diode': ps.diode(),
+    't': x,
+    'terr':xerrs,
+    'y':y,
+    'yerr':yerrs
+    '''
+    x = np.concatenate([d['t'] for d in  xyerssdatas],axis=0)
+    y = np.concatenate([d['y'] for d in  xyerssdatas],axis=0)
+    xerr = np.concatenate([d['terr'] for d in  xyerssdatas],axis=0)
+    yerr = np.concatenate([np.squeeze(d['yerr']) for d in  xyerssdatas],axis=0)
+    
+    yerr = np.sign(yerr)*np.sqrt(yerr**2 + (0.1*y)**2) # add 10% fluence uncertainty
+    
+    print(dstr)
+    fitter.fit(x,y,xerr,yerr)
+    
+    min = np.min(x)
+    max = np.max(x)
+    newx = np.logspace(np.log(min)/4.,np.log(max)/np.log(10))
+    
+    plt.plot(newx, fitter.DNeff(newx), label="fit")
+    return fitter
+
+
+
+allfits=[]
+
+
+ax = newplot()
+xs = pointsets.addToPlot("NEff", ["2002_UL","2002_UR","1003_UL","1003_UR"],["UL, 200µm","UR, 200µm","UL, 300µm","UR, 300µm"],
+                         add_rel_y_unc=0.1)
+allfits.append( (addfitted(["2002_UL","2002_UR","1003_UL","1003_UR"]), r'1.0e15 neq/$cm^2$') )
+cosmetics(xs,ax,"NEff $[1/cm^{3}]$")
+plt.ylim([0.5e13,4.5e13])
+plt.xlim([0.5,5000])
+plt.savefig(datadir+"/annealing_plots/allNEff_f1.0_"+addout+".pdf")
+
+
+ax = newplot()
+xs = pointsets.addToPlot("NEff", ["2003_UL","2003_UR","1102_UL", "1102_UR"],["UL, 200µm","UR, 200µm","UL, 300µm","UR, 300µm"],
+                         add_rel_y_unc=0.1)
+allfits.append( ( addfitted(["2003_UL","2003_UR","1102_UL", "1102_UR"]), r'1.5e15 neq/$cm^2$') )
+cosmetics(xs,ax,"NEff $[1/cm^{3}]$")
+plt.ylim([0.5e13,4.5e13])
+plt.xlim([0.5,5000])
+plt.savefig(datadir+"/annealing_plots/allNEff_f1.5_"+addout+".pdf")
+
+
+ax = newplot()
+xs = pointsets.addToPlot("NEff", ["2102_UL","2102_UR"],["UL, 200µm","UR, 200µm"],
+                         add_rel_y_unc=0.1)
+allfits.append( ( addfitted(["2102_UL","2102_UR"]), r'2.5e15 neq/$cm^2$') )
+cosmetics(xs,ax,"NEff $[1/cm^{3}]$")
+plt.ylim([0.5e13,4.5e13])
+plt.xlim([0.5,5000])
+plt.savefig(datadir+"/annealing_plots/allNEff_f2.5_"+addout+".pdf")
+
+#ax = newplot()
+#xs = pointsets.addToPlot("NEff", ["3003_UL"],["UL"],
+#                         add_rel_y_unc=0.1)
+#addfitted(["3003_UL"])
+#cosmetics(xs,ax,"NEff $[1/cm^{3}]$")
+#plt.ylim([0.5e13,4.5e13])
+#plt.xlim([0.5,5000])
+#plt.savefig(datadir+"/annealing_plots/allNEff_f10_"+addout+".pdf")
+#
+
+
+ax = newplot()
+for f in allfits:
+    
+    newx = np.logspace(np.log(1)/np.log(10),np.log(3000)/np.log(10))
+    plt.plot(newx, (f[0].DNeff(newx) - f[0].N_c)/(allfits[0][0].DNeff(newx) - allfits[0][0].N_c), label=f[1])
+    
+cosmetics(xs,ax,"∆NEff (Fluence) / ∆NEff (1.0 neq/$cm^2$) ")
+#plt.ylim([0.5e13,4.5e13])
+plt.xlim([0.5,5000])
+plt.savefig(datadir+"/annealing_plots/allNEff_fits_"+addout+".pdf")
+
+
+#exit()
+
+
 
 ax = newplot()
 pointsets.addToPlot("Udep",["6002_6in"],
@@ -144,11 +250,51 @@ cosmetics(xs,ax)
 plt.savefig(datadir+"/annealing_plots/120"+addout+".pdf")
 
 
-#newplot()
-#xs = pointsets.addToPlot("NEff", ["3003_UL","3007_UL","3008_UL"]+["2002_UL","2003_UL","2102_UL"]+["2002_UR","2003_UR","2102_UR"])
-#
-#cosmetics(xs,ax,"NEff $[1/cm^{3}]$")
-#plt.show()
+newplot()
+xs = pointsets.addToPlot("NEff", ["3003_UL","3007_UL","3008_UL"],
+                         colors='fluence',
+                         marker='o')
+xs = pointsets.addToPlot("NEff", ["2002_UL","2003_UL","2102_UL"],
+                         colors='fluence',
+                         marker='x')
+xs = pointsets.addToPlot("NEff", ["1002_UR","1003_UR","1102_UR"],
+                         colors='fluence',
+                         marker='+')
+
+cosmetics(xs,ax,"NEff $[1/cm^{3}]$")
+plt.savefig(datadir+"/annealing_plots/allNEff"+addout+".pdf")
+
+
+
+##### with fits
+
+
+
+
+
+
+#make the fits:
+
+
+    
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
