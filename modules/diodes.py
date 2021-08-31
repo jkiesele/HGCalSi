@@ -48,6 +48,10 @@ class diode(object):
         
     def label(self):
         return self.no+', '+self.radstr()
+    
+    @property
+    def thickness_cm(self):
+        return self.thickness / (1000. * 10.)
         
     def NEff(self, Vdep, Cend=None):
         
@@ -58,7 +62,7 @@ class diode(object):
         eps = 11.9
         q0 = 1.60E-19 # Coulomb
         
-        return 2*eps*eps0 / q0 * Vdep/(self.thickness / 1000. / 10.)**2
+        return 2*eps*eps0 / q0 * Vdep/(self.thickness_cm)**2
         
         return (Cend/self.area)**2 * 2*Vdep/(eps*eps0*q0)
     

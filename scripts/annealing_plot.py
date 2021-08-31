@@ -125,7 +125,7 @@ allfits=[]
 ax = newplot()
 xs = pointsets.addToPlot("NEff", ["2002_UL","2002_UR","1003_UL","1003_UR"],["UL, 200µm","UR, 200µm","UL, 300µm","UR, 300µm"],
                          add_rel_y_unc=0.1)
-allfits.append( (addfitted(["2002_UL","2002_UR","1003_UL","1003_UR"]), r'1.0e15 neq/$cm^2$') )
+allfits.append( (addfitted(["2002_UL","2002_UR","1003_UL","1003_UR"]), r'1.0e15 neq/$cm^2$', 1.0) )
 cosmetics(xs,ax,"NEff $[1/cm^{3}]$")
 plt.ylim([0.5e13,4.5e13])
 plt.xlim([0.5,5000])
@@ -135,7 +135,7 @@ plt.savefig(datadir+"/annealing_plots/allNEff_f1.0_"+addout+".pdf")
 ax = newplot()
 xs = pointsets.addToPlot("NEff", ["2003_UL","2003_UR","1102_UL", "1102_UR"],["UL, 200µm","UR, 200µm","UL, 300µm","UR, 300µm"],
                          add_rel_y_unc=0.1)
-allfits.append( ( addfitted(["2003_UL","2003_UR","1102_UL", "1102_UR"]), r'1.5e15 neq/$cm^2$') )
+allfits.append( ( addfitted(["2003_UL","2003_UR","1102_UL", "1102_UR"]), r'1.5e15 neq/$cm^2$', 1.5) )
 cosmetics(xs,ax,"NEff $[1/cm^{3}]$")
 plt.ylim([0.5e13,4.5e13])
 plt.xlim([0.5,5000])
@@ -145,21 +145,21 @@ plt.savefig(datadir+"/annealing_plots/allNEff_f1.5_"+addout+".pdf")
 ax = newplot()
 xs = pointsets.addToPlot("NEff", ["2102_UL","2102_UR"],["UL, 200µm","UR, 200µm"],
                          add_rel_y_unc=0.1)
-allfits.append( ( addfitted(["2102_UL","2102_UR"]), r'2.5e15 neq/$cm^2$') )
+allfits.append( ( addfitted(["2102_UL","2102_UR"]), r'2.5e15 neq/$cm^2$', 2.5) )
 cosmetics(xs,ax,"NEff $[1/cm^{3}]$")
 plt.ylim([0.5e13,4.5e13])
 plt.xlim([0.5,5000])
 plt.savefig(datadir+"/annealing_plots/allNEff_f2.5_"+addout+".pdf")
 
-#ax = newplot()
-#xs = pointsets.addToPlot("NEff", ["3003_UL"],["UL"],
-#                         add_rel_y_unc=0.1)
-#addfitted(["3003_UL"])
-#cosmetics(xs,ax,"NEff $[1/cm^{3}]$")
-#plt.ylim([0.5e13,4.5e13])
-#plt.xlim([0.5,5000])
-#plt.savefig(datadir+"/annealing_plots/allNEff_f10_"+addout+".pdf")
-#
+ax = newplot()
+xs = pointsets.addToPlot("NEff", ["6002_6in"],["DD"],
+                         add_rel_y_unc=0.1)
+addfitted(["6002_6in"])
+cosmetics(xs,ax,"NEff $[1/cm^{3}]$")
+plt.ylim([0.5e13,4.5e13])
+plt.xlim([0.5,5000])
+plt.savefig(datadir+"/annealing_plots/allNEff_6inchDD_"+addout+".pdf")
+
 
 
 ax = newplot()
@@ -173,9 +173,27 @@ cosmetics(xs,ax,"∆NEff (Fluence) / ∆NEff (1.0 neq/$cm^2$) ")
 plt.xlim([0.5,5000])
 plt.savefig(datadir+"/annealing_plots/allNEff_fits_"+addout+".pdf")
 
+alla = []
 
+allNC = []
+allfluence=[]
+for f in allfits:
+    alla.append(f[0].a)
+    allNC.append(f[0].N_c)
+    allfluence.append(f[2])
+
+ax = newplot()
+plt.plot(allfluence,alla)
+plt.xlabel(r"Fluence [$10^{15}$ neq/$cm^2$]")
+plt.ylabel(r"$N_a \cdot g_A$")
+plt.savefig(datadir+"/annealing_plots/allNEff_fits_NAgA"+addout+".pdf")
 #exit()
 
+ax = newplot()
+plt.plot(allfluence,allNC)
+plt.xlabel(r"Fluence [$10^{15}$ neq/$cm^2$]")
+plt.ylabel(r"$N_C$")
+plt.savefig(datadir+"/annealing_plots/allNEff_fits_NC"+addout+".pdf")
 
 
 ax = newplot()

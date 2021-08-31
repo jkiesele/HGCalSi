@@ -93,10 +93,11 @@ class AnnealingFitter(object):
             self._N_Yinf = popt[3]
             self._tau_y=popt[4]
             
-            print('a',self.a)
-            print('tau_0',self.tau_0)
-            print('N_c',self.N_c)
-            print('tau_y',self.tau_y)
+            print('a',"{:.2e}".format(self.a))
+            print('tau_0',"{:.2e}".format(self.tau_0))
+            print('N_c',"{:.2e}".format(self.N_c))
+            print('N_Yinf',"{:.2e}".format(self.N_Yinf))
+            print('tau_y',"{:.2e}".format(self.tau_y))
         
             return
         
