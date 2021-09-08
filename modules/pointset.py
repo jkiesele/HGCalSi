@@ -72,7 +72,7 @@ class pointSet(object):
         idx = np.argwhere(xp==xnp)
         if abs(xnp[idx]-pointat) > allowed_difference:
             good=False 
-        return idx, good
+        return idx[0][0], good
     
     def _get_closest_point(self, xnp, pointat, allowed_difference=5):
         return pointSet.get_closest_point(xnp, pointat, allowed_difference)#just historic
