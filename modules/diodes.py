@@ -6,8 +6,12 @@ diodes={}
 _pre_ann={
     5.0e14: 0.5,
     6.5e14: 0.7,
+    9.9e14: 12.4,
     1.0e15: 1,
+    1.4e15: 7.8,
     1.5e15: 1.7,
+    1.8e15: 20,
+    2.1e15: 20,
     2.5e15: 3,
     1.0e16: 14
     }
@@ -84,6 +88,12 @@ diodes['1003']=D1003
 D1102=diode(1.5e15,1102,300)
 diodes['1102']=D1102
 
+D1113=diode(9.9e+14,1113,300)
+diodes['1113']=D1113
+
+D1114=diode(1.4e+15,1114,300)
+diodes['1114']=D1114
+
 D2002=diode(1.0e15,2002,200)
 diodes['2002']=D2002
 
@@ -92,6 +102,9 @@ diodes['2003']=D2003
 
 D2102=diode(2.5e15,2102,200)
 diodes['2102']=D2102
+
+D2114=diode(2.1e+15,2114,200)
+diodes['2114']=D2114
 
 D3003=diode(1.0e16,3003,120)
 diodes['3003']=D3003
@@ -102,6 +115,9 @@ diodes['3007']=D3007
 D3008=diode(1.5e15,3008,120)
 diodes['3008']=D3008
 
+D3015=diode(1.8e15,3015,120)
+diodes['3015']=D3015
+
 D6002=diode(5.0e14,6002,120)
 D6002.ann_offset_error = 3
 D6002.area=0.2595
@@ -111,6 +127,7 @@ diodes['6002']=D6002
 
 def _make_colours():
     fluences = [d[1].rad for d in diodes.items()]
+    fluences = list(set(fluences))
     tab_colours=[
         'tab:blue'   ,
         'tab:orange' ,
