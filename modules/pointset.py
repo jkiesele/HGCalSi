@@ -4,10 +4,13 @@ import glob
 import os
 import pickle
 import numpy as np
-import cmath
+import math
 import matplotlib.pyplot as plt
 
 from plotting import curvePlotter
+
+
+
 
 datadir=os.getenv("DATAOUTPATH")
 
@@ -73,6 +76,12 @@ class pointSet(object):
         if abs(xnp[idx]-pointat) > allowed_difference:
             good=False 
         return idx[0][0], good
+    
+    @staticmethod
+    def modeIsVoltage(mode):
+        if mode == "Udep" or  mode == "NEff"  or mode == "NEffSlope":
+            return True
+        return False
     
     def _get_closest_point(self, xnp, pointat, allowed_difference=5):
         return pointSet.get_closest_point(xnp, pointat, allowed_difference)#just historic
@@ -172,11 +181,137 @@ class pointSet(object):
                 yerrup.append(yup)
             
             xs.append(x)
-            xerrdown.append(cmath.sqrt(p.diode.ann_offset_error**2 + (0.025*x)**2))
-            xerrup.append(cmath.sqrt(p.diode.ann_offset_error**2 + (0.025*x)**2))    
+            xerrdown.append(float(math.sqrt(p.diode.ann_offset_error**2 + (0.025*x)**2)))
+            xerrup.append(float(math.sqrt(p.diode.ann_offset_error**2 + (0.025*x)**2))) 
             
         return xs,[xerrdown,xerrup],ys,[yerrdown,yerrup]
 
+    @staticmethod
+    def symmetrisePoints(xs,xerrs,ys,yerrs):
+        xerr = np.array(xerrs)
+        xerr = np.abs(xerr)
+        xerr = np.max(xerr,axis=0)
+        yerr = np.array(yerrs)
+        yerr = np.abs(yerr)
+        yerr = np.max(yerr,axis=0)
+        
+        return xs,[xerr,xerr],ys,[yerr,yerr]
+
+
+#scratch area
+'''
+pointset is a set of measurements for one sample. can give I Udepl, in points
+
+convert to parametrised dependence. 
+
+
+'''
+class interpolatedPointSet(object):
+    
+    def __init__(self,
+                 pointset : pointSet,
+                 mode: str,
+                 **kwargs, #this also defines interpolation mode
+                 ):
+        self.ps = pointset
+        self._infunc = None
+        self.mode = mode
+        #do extraction here, leaving points with errors
+        self.x,self.xerrs,self.y,self.yerrs = self.ps.getXYs(mode=mode,**kwargs)
+        
+        self.xerrs = np.array(self.xerrs) #2 x X
+        self.yerrs = np.array(self.yerrs) #2 x X
+        
+        #print('self.yerrs',self.yerrs.shape)
+        
+        if not pointSet.modeIsVoltage(mode):
+            self.getY = self._currentInterpolate
+        else:
+            self.getY = self._voltageInterpolate
+        
+  
+    def _currentInterpolate(self,x):
+        '''
+        linear interpolation in log space
+        
+        returns: interpolated y point with [up,down] error and bool
+        wether it is within allowed interpolation range
+        '''
+        
+        if self._infunc is None:
+            #create interpolation
+            from scipy.interpolate import interp1d
+            logx = np.log(self.x)
+            infunc = interp1d(logx, self.y, kind='linear')
+            self._infunc = lambda xin : (infunc(np.log(xin)))
+        
+        return self._interpolate(x)
+    
+    
+    def _getYErrToPoint(self, pidx, inty):
+        
+        closesty = self.y[pidx]
+        ydiff = inty-closesty
+        
+        closestyerr = np.array(self.yerrs[:,pidx])
+        #make this symmetric
+        #if ydiff>0: #add to down
+        closestyerr[0] = float(math.sqrt(closestyerr[0]**2 + 1./4.*ydiff**2)) #add half the difference
+        #else:
+        closestyerr[1] = float(math.sqrt(closestyerr[1]**2 + 1./4.*ydiff**2)) #add half the difference
+        
+        return closestyerr
+        
+    def _interpolate(self,x):
+        
+        
+        from tools import closestPointIdx
+        closestidx = closestPointIdx(self.x, x)
+        next_to_closestidx = closestPointIdx(self.x, x, closestidx)
+        #print(closestidx,self.x[closestidx],x,next_to_closestidx,self.x[next_to_closestidx])
+        #is below range
+        if closestidx == 0 and self.x[closestidx] - x > 0:
+            return 0.,[0.,0.], False
+        #is above range
+        if closestidx == len(self.x)-1 and x - self.x[closestidx] > 0:
+            return 0.,[0.,0.], False
+        
+        #the rest is within range
+        #print(x)
+        inty = self._infunc(x)
+        closestyerr = np.expand_dims(self._getYErrToPoint(closestidx,inty),axis=1) # 2 x 1
+        nclosestyerr = np.expand_dims(self._getYErrToPoint(next_to_closestidx,inty),axis=1)
+        
+        closestyerr = np.min(np.concatenate([closestyerr,nclosestyerr],axis=-1),axis=-1)
+        #print('closestyerr',closestyerr.shape)
+        
+        return inty, closestyerr, True        
+     
+    def _voltageInterpolate(self,x):
+        
+        if self._infunc is None:
+            from fitting import AnnealingFitter
+            fitter = AnnealingFitter()
+            x,xerr,y,yerr = pointSet.symmetrisePoints(self.x,self.xerrs,self.y,self.yerrs) 
+            
+            y,yerr = self.diode().NEff(y), self.diode().NEff(yerr)
+            
+            xerr = xerr[0]
+            yerr = yerr[0]
+            fitter.fit(x, y, xerr, yerr)
+            
+            self._infunc = lambda xin : self.diode().VDep(fitter.DNeff(xin))
+            
+        return self._interpolate(x)
+     
+        
+    def diode(self):
+        return self.ps.points[0].diode
+    
+    
+'''
+scratch: alphaExtraction class takes interpolated point sets
+'''
 
 class pointSetsContainer(object):
     def __init__(self):
@@ -185,7 +320,18 @@ class pointSetsContainer(object):
     def append(self, ps):
         self.pointsets[ps.diodequali]=ps
         
-    def getXYsDiodes(self,mode, whichsets,current_at=None):
+    def getSet(self,whichset):
+        return self.pointsets[whichset]
+    
+    def getSets(self, whichsets):
+        out={}
+        for k,v in zip(self.pointsets.keys(),self.pointsets.values()):
+            if k in whichsets:
+                out[k] = v
+        return out
+        
+    def getXYsDiodes(self,mode, whichsets,
+                     current_at=None):
         xyerss=[]
         for aset in whichsets:
             ps = self.pointsets[aset]
@@ -204,6 +350,20 @@ class pointSetsContainer(object):
                 'yerr':yerrs
                 })
         return xyerss
+    
+    def getInterpolatedXYsDiodes(self,mode,whichsets,current_at=None):
+        out=[]
+        for aset in whichsets:
+            ps = self.pointsets[aset]
+            ips = interpolatedPointSet(ps,mode,current_at=current_at)
+            
+            out.append({
+                'pointset': ps,#for bookkeeping
+                'diode': ps.diode(),
+                'f(t)': ips.getY
+                })
+            
+        return out
         
     def addToPlot(self,mode, whichsets,add=[],marker='o',colors=None,linestyle='',linewidth=None,current_at=None, add_rel_y_unc=None):
         while len(add) < len(whichsets):

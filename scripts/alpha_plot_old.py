@@ -23,7 +23,8 @@ os.system('mkdir -p '+outdir)
                 '''
 
 
-def alpha_dep_theo(t):
+def alpha_dep_theo(t,temperature_in_C):
+    
     t0=1#t0[0]
     T=60
     a1 = 1.26e-17

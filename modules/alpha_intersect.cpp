@@ -2,20 +2,22 @@
 #include <cmath>
 #include <iostream>
 
-double alpha(double temp_C,double t_min){
+double alpha(double temp_C,double t_min, double t_0=1.){
     double temp = temp_C + 273.15;
     double a1 = 1.23e-17;
     double t1 = exp((12.9e3)/temp - 34.1);
     double a0 = -8.9e-17 + (4.6e-14)/temp;
     double beta = 3.07e-18;
 
-    return a1 * exp(-t_min / t1) + a0 - beta * log(t_min/1.);
+    return a1 * exp(-t_min / t1) + a0 - beta * log(t_min/t_0);
 }
 
 
 
-double find_intersection(double temp_C,double t_min,double target_temp,double rel_epsilon=1e-5){
-    double start_alpha = alpha(temp_C,t_min);
+double find_intersection(double temp_C,double t_min,double target_temp,double rel_epsilon=1e-5,double start_alpha=-1){
+
+    if(start_alpha<0)
+        start_alpha = alpha(temp_C,t_min);
     //direction is inverted to temp difference
 
     double stepsize = 10.*(temp_C-target_temp);

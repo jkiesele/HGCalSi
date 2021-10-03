@@ -18,11 +18,11 @@ def readTempLog(filename, calib=False, readLast=True):
             if len(line) < 1:
                 continue
             sline = line.split(' ')
-            if readLast and int(sline[0]) == 1:
+            if readLast and len(x) and x[-1] > sline[0]:
                 x=[]
                 y=[]
                 z=[]
-            x.append(int(sline[0]) )
+            x.append(float(sline[0]) )
             tempstr=sline[1]
             if tempstr[-4:] == ".625":
                 tempstr=tempstr[:-4]+".0625"

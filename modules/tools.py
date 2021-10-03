@@ -9,6 +9,16 @@ from fitting import DepletionFitter
 from diodes import diodes
 
 
+
+def closestPointIdx(arr, point, exclude=None):
+    
+    carr = np.array(arr)
+    if exclude is not None:
+        carr[exclude] = (np.max(arr)-np.min(arr))*1e6
+    
+    return np.argmin(np.abs(point-carr))
+
+
 def convert60Cto21C(t):
     return t* 390966.6/1000.
 

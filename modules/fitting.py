@@ -111,6 +111,110 @@ class AnnealingFitter(object):
         
         
     
+    
+class alphaExtractor(object):
+    def __init__(self, interpolated_pointset_dict : dict,
+                 rel_fluence_uncertainty=0.1
+                 ):
+        '''
+        takes a list of dict of interpolated point sets.
+        dict contains:
+                'pointset': ps,#for bookkeeping
+                'diode': ps.diode(),
+                'f(t)': ips.getY
+        
+        '''
+        self.interpolated_pointset_dict =interpolated_pointset_dict
+        self.rel_fluence_uncertainty = rel_fluence_uncertainty
+        
+    def extractForTimes(self, timearr_in_min):
+        pass
+    
+    def _createFitInputForTime(self, t_in_min : float):
+        
+        diodes=[]
+        fluences = []
+        currents = []
+        currenterrup = []
+        currenterrdown = []
+        for psd in self.interpolated_pointset_dict:
+            curr,errs,valid = psd['f(t)'](t_in_min)
+            if valid:
+                fluences.append(psd['diode'].rad)
+                diodes.append(psd['diode'])
+                currents.append(curr)
+                currenterrdown.append(errs[0])
+                currenterrup.append(errs[1])
+        
+        xs = np.array(fluences)
+        ys = np.array(currents) * 1e-2/1e-6 #from µm to cm
+        yerrs = np.max(np.array([currenterrdown,currenterrup]),axis=0)* 1e-2/1e-6 
+        
+        return xs,ys,yerrs,diodes
+    
+    def extractAlphaForTime(self, t_in_min : float, plot=False):
+        
+        def linear(a,x):
+            return a*1e-19*x
+        
+        xs,ys,yerrs,diodes = self._createFitInputForTime(t_in_min)
+        if plot:
+            for i,d in enumerate(diodes):
+                plt.errorbar(xs[i],ys[i],yerrs[i],xs[i]*self.rel_fluence_uncertainty,
+                             c=d.fluenceCol(),label=d.label(),marker='o')
+                
+                
+            
+        m = odr.Model(linear)
+        mydata = odr.RealData(xs, ys, sy=yerrs, sx = xs*self.rel_fluence_uncertainty)
+        myodr = odr.ODR(mydata, m, beta0=[7.])
+        out=myodr.run()
+        #print(out.beta)
+        #print(out.sd_beta)
+        minx = np.min(xs)
+        maxx = np.max(xs)
+        alpha = round(out.beta[0],2)
+        alphaerr = round(out.sd_beta[0],2)
+        
+        #the fluence is worst case a correlated uncertainty, needs to be considered here:
+        #alphaerr = math.sqrt(alphaerr**2 + (alpha*self.rel_fluence_uncertainty)**2)
+        
+        if plot:
+            plt.plot([minx,maxx],[linear(out.beta,minx),linear(out.beta,maxx)],
+                 label=r"$\alpha$(fit)="+str(alpha)+"$\pm$"+str(alphaerr)+"$10^{-19}$A/cm")
+        
+        if alphaerr:
+            return alpha,alphaerr
+        else:
+            return None, None
+        
+    def extractAlpha(self, time_array_minutes, plotstring=None):
+        
+        doplot = False
+        if plotstring is not None:
+            doplot=True
+            
+        alphas, alphaserrs =[],[]
+        for i,t in enumerate(time_array_minutes):
+            plt.close()
+            a,aerr = self.extractAlphaForTime(t,plot=doplot)
+            if doplot:
+                
+                handles, labels = plt.gca().get_legend_handles_labels()
+                unique = [(h, l) for i, (h, l) in enumerate(zip(handles, labels)) if l not in labels[:i]]
+                
+                plt.legend(*zip(*unique))
+                
+                plt.xlabel("Fluence [neq/cm$^2$]", fontsize=12)
+                plt.ylabel("I(U$_{dep}$)/Volume [A/cm$^3$] @ -20˚C", fontsize=12)
+                plt.tight_layout()
+                plt.savefig(plotstring+'_'+str(t)+'min.pdf')
+                plt.close()
+            if a is not None:
+                alphas.append(a)
+                alphaserrs.append(aerr)
+        return alphas,alphaserrs
+        
 
 class Linear(object):
     def __init__(self, a=None,b=None):

@@ -1,9 +1,67 @@
 
 import math
+import numpy as np
+
+
+def radiation_annealing_Ljubljana(radtime, plot=False):
+    
+    import alpha_calc #this cpython lib import might not work on all machine sin the same way
+
+#now calculate average annealing time assuming linearly increasing radiation damage per second (because why not)
+
+    rising_annealing=np.array([i for i in range(int(radtime*60))],dtype='float32') #again in minutes
+    falling_annealing=np.array([i+rising_annealing[-1] for i in range(30*60)],dtype='float32')#30 minutes cool off
+    
+    rising_annealing = rising_annealing/60
+    falling_annealing= falling_annealing/60
+    
+    #back to minutes
+    
+    
+    def rising(t_in_minutes):
+        return 45. - 25.*math.exp( - (t_in_minutes)/3.5 ) 
+    
+    def falling(t_in_minutes,last_risen):
+        return (20.+(last_risen-45.))*math.exp( - (t_in_minutes - radtime)/8 ) + 25
+    
+    xr = [i for i in rising_annealing]
+    xf = [i for i in falling_annealing]
+    
+    rise = np.array([rising(i) for i in xr], dtype='float32')
+    
+    fall = np.array([falling(i,rise[-1]) for i in xf], dtype='float32')
+    
+    
+    x=xr+xf
+    y=np.concatenate([rise,fall],axis=0)
+    
+    if plot:
+        import matplotlib.pyplot as plt
+        plt.plot(x,y)
+        plt.xlabel("minutes")
+        plt.xlabel("temperature in reactor")
+        plt.show()
+    
+    
+    #get full equiv annealing time for all in rise
+    time_bins = []
+    for T in y:
+        time_bins.append(alpha_calc.equiv_annealing_time(T, 1/60., 60.))#per second
+        
+    fraction_irradiated = xr/np.max(xr)
+    fraction_irradiated = np.concatenate([fraction_irradiated, falling_annealing*0.+1],axis=0)#to have full range
+    
+    totaltime = 0
+    for t,f in zip(time_bins,fraction_irradiated):
+        totaltime +=  t*f
+    
+    return totaltime
+ 
+
 
 diodes={}
 
-_pre_ann={
+_old_pre_ann={
     5.0e14: 0.5,
     6.5e14: 0.7,
     9.9e14: 12.4,
@@ -14,6 +72,20 @@ _pre_ann={
     2.1e15: 20,
     2.5e15: 3,
     1.0e16: 14
+    }
+
+#updated taking into account the rise
+_pre_ann={
+    5.0e14: 0.5,
+    6.5e14: 0.6,
+    9.9e14: 12.4,
+    1.0e15: 0.9,
+    1.4e15: 7.8,
+    1.5e15: 1.3,
+    1.8e15: 20,
+    2.1e15: 20,
+    2.5e15: 2.1,
+    1.0e16: 7
     }
 
 fluence_colours = None
@@ -53,6 +125,8 @@ class diode(object):
     def label(self):
         return self.no+', '+self.radstr()
     
+    def labelid(self):
+        return self.label()
     @property
     def thickness_cm(self):
         return self.thickness / (1000. * 10.)
@@ -66,9 +140,21 @@ class diode(object):
         eps = 11.9
         q0 = 1.60E-19 # Coulomb
         
-        return 2*eps*eps0 / q0 * Vdep/(self.thickness_cm)**2
+        return Vdep * 2.*eps*eps0 / q0 * 1./(self.thickness_cm)**2
         
         return (Cend/self.area)**2 * 2*Vdep/(eps*eps0*q0)
+    
+    def VDep(self, Neff, Cend=None):
+        
+        if Cend is None:
+            Cend = self.const_cap
+
+        eps0 = 8.85E-14 # F/cm
+        eps = 11.9
+        q0 = 1.60E-19 # Coulomb
+        
+        return Neff / (2.*eps*eps0 / q0 * 1./(self.thickness_cm)**2)
+        
     
     def NEffFromSlope(self,slope):
         eps0 = 8.85E-14 # F/cm
