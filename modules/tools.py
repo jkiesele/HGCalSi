@@ -14,7 +14,10 @@ def closestPointIdx(arr, point, exclude=None):
     
     carr = np.array(arr)
     if exclude is not None:
-        carr[exclude] = (np.max(arr)-np.min(arr))*1e6
+        if arr[exclude] > point:
+            return exclude-1
+        if arr[exclude] < point:
+            return exclude+1
     
     return np.argmin(np.abs(point-carr))
 

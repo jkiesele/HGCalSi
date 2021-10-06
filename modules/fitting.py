@@ -213,7 +213,7 @@ class alphaExtractor(object):
             if a is not None:
                 alphas.append(a)
                 alphaserrs.append(aerr)
-        return alphas,alphaserrs
+        return np.array(alphas),np.array(alphaserrs)
         
 
 class Linear(object):

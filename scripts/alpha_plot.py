@@ -1,4 +1,4 @@
-
+#!/usr/bin/env python3
 
 import os
 import matplotlib.pyplot as plt
@@ -8,29 +8,85 @@ from pointset import pointSetsContainer, pointSet, loadAnnealings
 from pointset import interpolatedPointSet
 from fitting import alphaExtractor
 
+
+datadir=os.getenv("DATAOUTPATH")
+outdir=os.getenv("DATAOUTPATH")+'/alpha_plots/'
+os.system('mkdir -p '+outdir)
+
 pointsets, kneepointset= loadAnnealings()
 
-data = pointsets.getInterpolatedXYsDiodes("IperVolume", 
+dataAll = pointsets.getInterpolatedXYsDiodes("IperVolume", 
                                           ["3003_UL","3007_UL","3008_UL"]+
                                           ["2002_UL","2003_UL","2102_UL","2002_UR","2003_UR","2102_UR"]+
                                           ["1002_UL","1003_UL","1102_UL","1002_UR","1003_UR","1102_UR"], 
-                                          current_at='Udep')
+                                          current_at='Udep',
+                                          debugplots = {'outfile' : outdir+'EPI_FZ_interpol','xlabel': 'Annealing time [min]', 'ylabel': 'I(U$_{dep}$) [A]'}
+                                          )
+
+dataFZ = pointsets.getInterpolatedXYsDiodes("IperVolume", 
+                                          ["2002_UL","2003_UL","2102_UL","2002_UR","2003_UR","2102_UR"]+
+                                          ["1002_UL","1003_UL","1102_UL","1002_UR","1003_UR","1102_UR"], 
+                                          current_at='Udep',
+                                          debugplots = {'outfile' : outdir+'FZ_interpol', 'xlabel': 'Annealing time [min]','ylabel': 'I(U$_{dep}$) [A]'}
+                                          )
 
 
-extractor = alphaExtractor(interpolated_pointset_dict=data,
-                            rel_fluence_uncertainty=1e-1)
+dataEPI = pointsets.getInterpolatedXYsDiodes("IperVolume", 
+                                          ["3003_UL","3007_UL","3008_UL"],
+                                          current_at='Udep',
+                                          debugplots = {'outfile' : outdir+'EPI_interpol', 'xlabel': 'Annealing time [min]','ylabel': 'I(U$_{dep}$) [A]'}
+                                          )
 
-#the correlation between the fluence uncertainteis is unclear.. better set it to zero
 
-times = [10,30,74, 103, 151, 245, 380, 640]
+alldata=[]
+i=0
+for savestring, data, c in zip(['FZ','EPI+FZ','EPI'],[dataFZ,dataAll,dataEPI],['tab:orange','tab:blue','tab:green']):
+    extractor = alphaExtractor(interpolated_pointset_dict=data,
+                                rel_fluence_uncertainty=1e-1)
+    
+    
+    #set some offsets so the plot can be read better
+    times =  [10+i/3,30+3*i/3,80+8*i/3, 100+10*i/3, 150+15*i/3, 250+25*i/3, 380+38*i/3, 640+64*i/3]
+    
+    alphas, alphaerrs = extractor.extractAlpha(times,plotstring=outdir+'alphafit_'+savestring)
+    
+    alldata.append((times, alphas, alphaerrs, savestring, c))
+    i+=1.
+    
+for t,a,ae,sstr,color in alldata:    
+    
+    plt.close()
+    plt.errorbar(t,a,yerr=np.sqrt((0.1*a)**2+ ae**2), #add the 10% fluence uncertainty in quadrature a posteriori
+                 linestyle=None,linewidth=0,elinewidth=2.,label=None,alpha=0.2,color=color)
+    
+    plt.errorbar(t,a,yerr=ae,marker='o',
+                 linestyle=None,linewidth=0,elinewidth=2.,label=sstr,color=color)
+    
+    if False:#estebans point
+        plt.errorbar([10], [7.675], yerr=[0.2], xerr=[0.], marker='x',linewidth=0,elinewidth=2.,
+                         label='6" DD (TDR)')
+    
+        plt.legend()
+        
 
-alphas, alphaerrs = extractor.extractAlpha(times,plotstring='testalpha')
+    plt.xlabel('Annealing time @ 60˚C [min]')
+    plt.ylabel(r'$\alpha$ [$10^{-19}$ A/cm]')
+    plt.xscale('log')
+    plt.tight_layout()
+    plt.savefig(outdir+"annealing_alpha_"+sstr+".pdf")
 
-plt.errorbar(times,alphas,yerr=alphaerrs,marker='o',linestyle=None,linewidth=0,elinewidth=2.,)
 
+
+plt.close()
+for t,a,ae,sstr,color in alldata:
+    plt.errorbar(t,a,yerr=np.sqrt((0.1*a)**2+ ae**2) ,
+                 linestyle=None,linewidth=0,elinewidth=2.,label=None,alpha=0.2,color=color)
+    
+    plt.errorbar(t,a,yerr=ae,marker='o',
+                 linestyle=None,linewidth=0,elinewidth=2.,label=sstr,color=color)
+plt.legend()
 plt.xlabel('Annealing time @ 60˚C [min]')
 plt.ylabel(r'$\alpha$ [$10^{-19}$ A/cm]')
 plt.xscale('log')
 plt.tight_layout()
-plt.savefig("annealing_alpha.pdf")
-exit()
+plt.savefig(outdir+"annealing_alpha.pdf")

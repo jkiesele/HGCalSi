@@ -268,6 +268,7 @@ class interpolatedPointSet(object):
         from tools import closestPointIdx
         closestidx = closestPointIdx(self.x, x)
         next_to_closestidx = closestPointIdx(self.x, x, closestidx)
+        
         #print(closestidx,self.x[closestidx],x,next_to_closestidx,self.x[next_to_closestidx])
         #is below range
         if closestidx == 0 and self.x[closestidx] - x > 0:
@@ -276,13 +277,31 @@ class interpolatedPointSet(object):
         if closestidx == len(self.x)-1 and x - self.x[closestidx] > 0:
             return 0.,[0.,0.], False
         
+        #sanity check, should not trigger
+        if self.x[closestidx] > x and self.x[next_to_closestidx] > x or \
+           self.x[closestidx] < x and self.x[next_to_closestidx] < x :
+            raise RuntimeError("can't be", x, self.x[closestidx], self.x[next_to_closestidx])
+        
+        
+        x0 = self.x[closestidx]
+        x1 = self.x[next_to_closestidx]
+        
+        reldistanceto0 = np.abs(x - x0)/(np.abs(x1 - x0)+1e-12)
+        reldistanceto1 = np.abs(x1 - x)/(np.abs(x1 - x0)+1e-12)
+        
         #the rest is within range
         #print(x)
-        inty = self._infunc(x)
-        closestyerr = np.expand_dims(self._getYErrToPoint(closestidx,inty),axis=1) # 2 x 1
-        nclosestyerr = np.expand_dims(self._getYErrToPoint(next_to_closestidx,inty),axis=1)
+        inty = self._infunc(x) #
+        closestyerr  = reldistanceto1 * np.expand_dims(self._getYErrToPoint(closestidx,inty),axis=1) # 2 x 1
+        nclosestyerr = reldistanceto0 * np.expand_dims(self._getYErrToPoint(next_to_closestidx,inty),axis=1)
         
-        closestyerr = np.min(np.concatenate([closestyerr,nclosestyerr],axis=-1),axis=-1)
+        #print(x0, x, x1)
+        #print(closestyerr, nclosestyerr)
+        #print(' ')
+        
+        closestyerr = np.sum(np.concatenate([closestyerr,nclosestyerr],axis=-1),axis=-1)
+        
+        #exit()
         #print('closestyerr',closestyerr.shape)
         
         return inty, closestyerr, True        
@@ -304,6 +323,16 @@ class interpolatedPointSet(object):
             
         return self._interpolate(x)
      
+    
+    def interpolateArray(self, xs):
+        xouts,ys,yerrs = [],[],[]
+        for x in xs:
+            y,yerr,valid = self.getY(x)
+            if valid:
+                xouts.append(x)
+                ys.append(y)
+                yerrs.append(yerr)
+        return np.array(xouts),np.array(ys),np.transpose(np.array(yerrs),[1,0])#matplotlib error format
         
     def diode(self):
         return self.ps.points[0].diode
@@ -351,11 +380,31 @@ class pointSetsContainer(object):
                 })
         return xyerss
     
-    def getInterpolatedXYsDiodes(self,mode,whichsets,current_at=None):
+    def getInterpolatedXYsDiodes(self,mode,whichsets,current_at=None,debugplots=None):
         out=[]
         for aset in whichsets:
             ps = self.pointsets[aset]
             ips = interpolatedPointSet(ps,mode,current_at=current_at)
+            
+            if debugplots is not None:
+                x,xerr,y,yerr = ps.getXYs(mode,current_at)
+                
+                ixs,iys,iyerrs = ips.interpolateArray(np.arange(np.min(x),np.max(x)))
+                
+                plt.close()
+                plt.errorbar(ixs,iys,yerr=iyerrs,label='interpolated',
+                             linewidth=2,elinewidth=2.,ecolor='tab:gray',color='tab:red')
+                
+                plt.errorbar(x,y,yerr=yerr,xerr=xerr,label='measured points',
+                             linewidth=0,elinewidth=2.,marker='o',color='tab:orange')
+                
+                plt.xlabel(debugplots['xlabel'])
+                plt.ylabel(debugplots['ylabel'])
+                plt.legend()
+                plt.tight_layout()
+                plt.savefig(debugplots['outfile']+aset+'.pdf')
+                plt.close()
+                
             
             out.append({
                 'pointset': ps,#for bookkeeping

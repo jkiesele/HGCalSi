@@ -94,7 +94,8 @@ class diode(object):
     def __init__(self,
                  rad,
                  no,
-                 thickness
+                 thickness,
+                 material
                  ):
         self.rad=rad
         self.no=str(no)
@@ -102,6 +103,7 @@ class diode(object):
         self.ann_offset=_pre_ann[rad]
         self.ann_offset_error=1
         self.area=0.2595 # sensor area in cm2 
+        self.material=material
         
         if self.no[0] == "6":
             self.area= 0.165 #+- 0.005 cm2
@@ -122,11 +124,21 @@ class diode(object):
     def radstr(self):
         return str("{:.1e}".format(self.rad))+" neq/cm$^2$"
         
+    def rad_str(self):#consistency
+        return self.radstr()    
+        
     def label(self):
         return self.no+', '+self.radstr()
     
-    def labelid(self):
+    def label_str(self): #just for consistency
         return self.label()
+    
+    def thickness_str(self):
+        return str(self.thickness)+'$\,\mu$m'
+    
+    def material_str(self):
+        return self.material
+    
     @property
     def thickness_cm(self):
         return self.thickness / (1000. * 10.)
@@ -165,48 +177,48 @@ class diode(object):
 
 
 
-D1002=diode(6.5e14,1002,300)
+D1002=diode(6.5e14,1002,300,"FZ")
 diodes['1002']=D1002
 
-D1003=diode(1.0e15,1003,300)
+D1003=diode(1.0e15,1003,300,"FZ")
 diodes['1003']=D1003
 
-D1102=diode(1.5e15,1102,300)
+D1102=diode(1.5e15,1102,300,"FZ")
 diodes['1102']=D1102
 
-D1113=diode(9.9e+14,1113,300)
+D1113=diode(9.9e+14,1113,300,"FZ")
 diodes['1113']=D1113
 
-D1114=diode(1.4e+15,1114,300)
+D1114=diode(1.4e+15,1114,300,"FZ")
 diodes['1114']=D1114
 
-D2002=diode(1.0e15,2002,200)
+D2002=diode(1.0e15,2002,200,"FZ")
 diodes['2002']=D2002
 
-D2003=diode(1.5e15,2003,200)
+D2003=diode(1.5e15,2003,200,"FZ")
 diodes['2003']=D2003
 
-D2102=diode(2.5e15,2102,200)
+D2102=diode(2.5e15,2102,200,"FZ")
 diodes['2102']=D2102
 
-D2114=diode(2.1e+15,2114,200)
+D2114=diode(2.1e+15,2114,200,"FZ")
 diodes['2114']=D2114
 
-D3003=diode(1.0e16,3003,120)
+D3003=diode(1.0e16,3003,120,"EPI")
 diodes['3003']=D3003
 
-D3007=diode(2.5e15,3007,120)
+D3007=diode(2.5e15,3007,120,"EPI")
 diodes['3007']=D3007
 
-D3008=diode(1.5e15,3008,120)
+D3008=diode(1.5e15,3008,120,"EPI")
 diodes['3008']=D3008
 
-D3015=diode(1.8e15,3015,120)
+D3015=diode(1.8e15,3015,120,"EPI")
 diodes['3015']=D3015
 
-D6002=diode(5.0e14,6002,120)
+D6002=diode(5.0e14,6002,120,"DD")
 D6002.ann_offset_error = 3
-D6002.area=0.2595
+D6002.area=0.2595 #check this
 diodes['6002']=D6002
 
 #create fluence colours

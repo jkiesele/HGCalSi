@@ -122,6 +122,48 @@ def addfitted(dstr):
 allfits=[]
 
 
+#120µm
+###############################["3003_UL","3007_UL","3008_UL"]
+
+ax = newplot()
+print('3003_UL, 1e16')
+xs = pointsets.addToPlot("NEff", ["3003_UL"],["UL, 120µm"],
+                         add_rel_y_unc=0.1)
+allfits.append( ( addfitted(["3003_UL"]), r'1.0e16 neq/$cm^2$', 10.) )
+cosmetics(xs,ax,"NEff $[1/cm^{3}]$")
+plt.ylim([0.5e13,7.5e13])
+plt.xlim([0.5,5000])
+plt.savefig(datadir+"/annealing_plots/allNEff_120f10_"+addout+".pdf")
+
+
+ax = newplot()
+print('3007_UL, 2.5e15')
+xs = pointsets.addToPlot("NEff", ["3007_UL"],["UL, 120µm"],
+                         add_rel_y_unc=0.1)
+allfits.append( ( addfitted(["3007_UL"]), r'2.5e15 neq/$cm^2$', 2.5) )
+cosmetics(xs,ax,"NEff $[1/cm^{3}]$")
+plt.ylim([0.5e13,7.5e13])
+plt.xlim([0.5,5000])
+plt.savefig(datadir+"/annealing_plots/allNEff_120f2.5_"+addout+".pdf")
+
+
+ax = newplot()
+print('3008_UL, 1.5e15')
+xs = pointsets.addToPlot("NEff", ["3008_UL"],["UL, 120µm"],
+                         add_rel_y_unc=0.1)
+allfits.append( ( addfitted(["3008_UL"]), r'1.5e15 neq/$cm^2$', 10.) )
+cosmetics(xs,ax,"NEff $[1/cm^{3}]$")
+plt.ylim([0.5e13,7.5e13])
+plt.xlim([0.5,5000])
+plt.savefig(datadir+"/annealing_plots/allNEff_120f1.5_"+addout+".pdf")
+
+
+
+exit()
+
+###############################
+
+
 ax = newplot()
 xs = pointsets.addToPlot("NEff", ["2002_UL","2002_UR","1003_UL","1003_UR"],["UL, 200µm","UR, 200µm","UL, 300µm","UR, 300µm"],
                          add_rel_y_unc=0.1)
@@ -150,6 +192,8 @@ cosmetics(xs,ax,"NEff $[1/cm^{3}]$")
 plt.ylim([0.5e13,4.5e13])
 plt.xlim([0.5,5000])
 plt.savefig(datadir+"/annealing_plots/allNEff_f2.5_"+addout+".pdf")
+
+
 
 ax = newplot()
 xs = pointsets.addToPlot("NEff", ["6002_6in"],["DD"],
