@@ -104,6 +104,7 @@ class diode(object):
         self.ann_offset_error=1
         self.area=0.2595 # sensor area in cm2 
         self.material=material
+        self.udep_norad=1
         
         if self.no[0] == "6":
             self.area= 0.165 #+- 0.005 cm2
@@ -111,10 +112,13 @@ class diode(object):
         self.const_cap=0
         if self.no[0] == "1":
             self.const_cap = math.sqrt(1/1.2e22)
+            self.udep_norad = 264
         elif self.no[0] == "2":
             self.const_cap = math.sqrt(1/5.5e21)
+            self.udep_norad = 126
         elif self.no[0] == "3":
             self.const_cap = math.sqrt(1/1.92e21)
+            self.udep_norad = 44
         elif self.no[0] == "6":
             self.const_cap = None #unknown
         
@@ -129,6 +133,12 @@ class diode(object):
         
     def label(self):
         return self.no+', '+self.radstr()
+    
+    def paperlabel(self, addfluence=True):
+        if addfluence:
+            return self.thickness_str()+' '+self.material_str()+' '+self.rad_str()
+        else:
+            return self.thickness_str()+' '+self.material_str()
     
     def label_str(self): #just for consistency
         return self.label()
@@ -152,7 +162,7 @@ class diode(object):
         eps = 11.9
         q0 = 1.60E-19 # Coulomb
         
-        return Vdep * 2.*eps*eps0 / q0 * 1./(self.thickness_cm)**2
+        #return Vdep * 2.*eps*eps0 / q0 * 1./(self.thickness_cm)**2
         
         return (Cend/self.area)**2 * 2*Vdep/(eps*eps0*q0)
     
@@ -167,6 +177,8 @@ class diode(object):
         
         return Neff / (2.*eps*eps0 / q0 * 1./(self.thickness_cm)**2)
         
+    def NEff_norad(self):
+        return self.NEff(self.udep_norad)
     
     def NEffFromSlope(self,slope):
         eps0 = 8.85E-14 # F/cm

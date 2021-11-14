@@ -1,3 +1,8 @@
+
+
+import numpy
+numpy.set_printoptions(linewidth=numpy.nan)
+
 from numpy import arange
 import numpy as np
 import math
@@ -17,6 +22,182 @@ import matplotlib.pyplot as plt
 from scipy.signal import savgol_filter
 import pickle
 
+class Covariance(object):
+    
+    def __init__(self,
+                 errs=[],
+                 assumed_corr=0
+                 ):
+        
+        errarr = np.array(errs)
+        corr = np.zeros((len(errarr),len(errarr)))+assumed_corr
+        corr = corr*(1.-np.diag(np.ones_like(errarr)))+np.diag(errarr*0.+1.)
+        
+        self.data=None
+        self.makeCovariance(errarr,corr)
+        
+        
+    def makeCovariance(self, errs, corrmatrix):
+        errarr = np.array(errs)
+        cerra = np.expand_dims(errarr,axis=0)
+        cerrb = np.expand_dims(errarr,axis=1)
+        
+        cov = cerra * corrmatrix * cerrb
+        self.data=cov
+        
+    def set(self, nparr):
+        assert nparr.shape[0]==nparr.shape[1]
+        self.data=nparr
+        
+    def getCorrelations(self):
+        errs = self.getErrs()
+        errsa = np.expand_dims(errs,axis=0)
+        errsb = np.expand_dims(errs,axis=1)
+        return self.data/errsa/errsb
+    
+    def data(self):
+        return self.data
+    
+    def __str__(self):
+        return np.round(self.data,2).__str__()
+    
+    def getErrs(self):
+        return np.sqrt(np.diagonal(self.data))
+    
+    
+    def __add__(self, other):
+        cvnew = Covariance([])
+        cvnew.data = self.data + other.data
+        return cvnew
+    
+    def append(self, other, correlation=0):
+        allerrs = np.concatenate([self.getErrs(), other.getErrs()],axis=0)
+        thiscorr = self.getCorrelations()
+        othercorr = other.getCorrelations()
+        thiscorrp = np.pad(thiscorr, [0,othercorr.shape[1]],constant_values=correlation)[:thiscorr.shape[1]]
+        othercorrp = np.pad(othercorr, [thiscorr.shape[1],0],constant_values=correlation)[thiscorr.shape[1]:]
+        appended = np.concatenate([thiscorrp,othercorrp],axis=0)
+        
+        self.makeCovariance(allerrs, appended)
+        
+        
+class MeasurementWithCovariance(object):
+    def __init__(self,
+                 data,
+                 global_correlation=0.
+                 ):
+        '''
+        data format:
+        {'diode': ps.diode(),
+                't': x,
+                'terr':xerrs,
+                'y':y,
+                'yerr':yerrs
+                })
+        '''
+        self.x=np.array(data['t'])
+        self.y=np.array(data['y'])
+        yerr=0
+        if len(data['yerr'].shape):
+            yerr = np.squeeze(data['yerr'][:,0])
+        else:
+            yerr = data['yerr']
+        self.xerr=np.array(data['terr'])
+        
+        
+        #build a covariance
+        self.ycovariance = Covariance(yerr,global_correlation)
+    
+    def getCovariance(self):
+        return self.ycovariance
+    
+    def getX(self):
+        return self.x
+    
+    def getY(self):
+        return self.y
+    
+    def getXErrs(self):
+        return self.xerr
+    #
+    # create individual measurement with:
+    #   - partially correlated syst. uncertainty
+    # then 
+    #   - append the measurements, same syst
+    #   - add fluence uncertainty by measurement
+    #
+    #
+    
+class MeasurementSet(object):
+    def __init__(self,globalcorr=0.):
+        self.measurements=[]
+        self.globalcorr=globalcorr
+    
+    def addMeasurement(self, meas: MeasurementWithCovariance):
+        self.measurements.append(meas)
+    
+    def getCombinedData(self, addfluence_unc=0.1, correlatesyst=True):
+        #return x,y,and full cov
+        #create individual measurement mask
+        
+        combcov = None
+        fluencecov=None
+        ys = []
+        xs =[]
+        xerrs=[]
+        correlatedsyst=None
+        if len(self.measurements)<2:
+            addfluence_unc=0.#n0t for single measurements
+        for m in self.measurements:
+            y = m.getY()
+            ys.append(y)
+            xs.append(m.getX())
+            xerrs.append(m.getXErrs())
+            
+            if correlatedsyst is None:
+                correlatedsyst = m.getCovariance().getCorrelations()[0,1]
+            else:
+                thiscorr =  m.getCovariance().getCorrelations()[0,1]
+                if correlatesyst and (not abs(thiscorr-correlatedsyst)<0.00001):
+                    raise ValueError("getCombinedData: correlatesyst only works if correlations are the same, here"
+                                     +str(thiscorr)+' vs '+str(correlatedsyst))
+            
+            fluenceerr = y*addfluence_unc
+            if fluencecov is None:
+                fluencecov = Covariance(fluenceerr,1.)
+            else:
+                fluencecov.append(Covariance(fluenceerr,1.))
+                                  
+            cm = m.getCovariance() 
+            if combcov is None:
+                combcov=cm
+            else:
+                if correlatesyst:
+                    combcov.append(cm, correlatedsyst)
+                else:
+                    combcov.append(cm)
+                
+        xs = np.concatenate(xs,axis=0)
+        ys = np.concatenate(ys,axis=0)
+        xerrs = np.concatenate(xerrs,axis=0)
+        
+        #add covariance matrices
+        if addfluence_unc>0:
+            totalcov = combcov + fluencecov
+        else:
+            totalcov = combcov
+            
+        return {
+            'x':xs,
+            'y':ys,
+            'xerr': xerrs,
+            'cov':totalcov.data
+            }
+        
+
+
+
+
 
 
 def smoothen(x,y):
@@ -31,84 +212,304 @@ def smoothen(x,y):
     return xint, yint
  
 
-class AnnealingFitter(object):
-    def __init__(self):
-        self._a=1.
-        self._tau_0=0.1
-        self._N_c =3.
-        self._N_Yinf = 1.
-        self._tau_y=8.
-        
-        self.scalex=1000.
-        self.scaley=1e13
-        
-    def _DNeff(self, B, t):
-        a, tau_0, N_c, N_Yinf, tau_y = B
-        a, tau_0, N_c, N_Yinf, tau_y = np.abs(a), np.abs(tau_0), np.abs(N_c), np.abs(N_Yinf), np.abs(tau_y)
-        return self.scaley*(a*np.exp(- t/self.scalex/tau_0) + N_c + N_Yinf * ( 1. - 1./(1.+t/self.scalex/tau_y)))
-       
-    def DNeff(self, t):
-        if not len(t):
-            t=np.array(t)
-        return self.a*np.exp(- t/self.tau_0) + self.N_c + self.N_Yinf * ( 1. - 1./(1.+t/self.tau_y))
-        #return self._DNeff( (self._a, self._tau_0, self._N_c, self._N_Yinf, self._tau_y), t)
-    
-    @property    
-    def a(self):
-        return abs(self._a)*self.scaley
-    @property
-    def tau_0(self):
-        return self.scalex*abs(self._tau_0)
-    @property
-    def N_c(self):
-        return self.scaley*abs(self._N_c)
-    @property
-    def N_Yinf(self):
-        return abs(self._N_Yinf)*self.scaley
-    @property
-    def tau_y(self):
-        return abs(self._tau_y)*self.scalex
 
-    def fit(self, x, y, xerr, yerr=None):
-        x = np.array(x)
-        y = np.array(y)
-        xerr = np.array(xerr)
-        if yerr is not None:
-            yerr = np.array(yerr)
+class SimpleAnnealingFitter(object):
+    def __init__(self,
+                 x,
+                 y,
+                 xerr,
+                 ycov
+                 ):
+        self.fittedparas={}
         
-        if True:
-            m = odr.Model(self._DNeff)
-            if yerr is None:
-                yerr = y/1000.
-            #print(x, y, xerr, yerr)
-            mydata = odr.RealData(x, y, sx=xerr, sy=yerr)
-            myodr = odr.ODR(mydata, m, beta0=np.array([self._a, self._tau_0, self._N_c, self._N_Yinf, self._tau_y]))
-            out=myodr.run()
+        self._x = x 
+        self._y = y
+        self._xerr = xerr
+        self._ycov = ycov
+        
+        self.NA0_scale = 1e-3 * 1e15 
+        self.tau_a_scale = 10.
+        self.NY0_scale = 1e14
+        self.tau_y_scale = 1e4
+        self.NC0_scale = 1e13
+        self.yscale = 1e0
+    
+    def _NEfffunc(self, B, t):
+        NA0,tau_a, NY0, tau_y, NC0 = B
+        
+        NA0*=self.NA0_scale
+        tau_a*=self.tau_a_scale
+        NY0*=self.NY0_scale
+        tau_y*=self.tau_y_scale
+        NC0*=self.NC0_scale
+        
+        N_A = NA0 * np.exp(-t / tau_a)
+        N_Y = NY0 * (1. - 1./(1 + t/tau_y))
+        #print(N_A.shape, N_Y.shape)
+        ret = (N_A + NC0 + N_Y)/self.yscale
+        return ret
+    
+    def _spo_NEfffunc(self, t, *B):
+        return self._NEfffunc(B,t)
+    
+    def NEff(self,t,phi,NEff0,NC):
+        d = self.fittedparas
+        return self.yscale*self._NEfffunc([d['g_a']*phi/self.NA0_scale,
+                               d['tau_a']/self.tau_a_scale,
+                               d['g_y']*phi/self.NY0_scale,
+                               d['tau_y']/self.tau_y_scale,
+                               d['N_C+N_{Eff,0}']/self.NC0_scale,
+                               ], 
+                              t)
+    
+    def fit(self, 
+            phi, 
+            useodr=False):
+        
+        
+        startpara = np.array([
+                    1., #self._y[0]-np.min(self._y),   #NA0,
+                    1., #15.,   #tau_a, 
+                    1., #np.max(self._y)-np.min(self._y),   #NY0, 
+                    1., #1e3,   #tau_y, 
+                    1. #np.min(self._y)   #NC0
+             ])
+        
+        popt, pcov, perr=None,None,None
+        
+        if useodr:
+            m = odr.Model(self._NEfffunc)
+            
+            mydata = odr.RealData(self._x, self._y/self.yscale, 
+                                  sx=self._xerr, sy=np.sqrt(np.diagonal(self._ycov))/self.yscale)
+            
+            myodr = odr.ODR(mydata, m, beta0=startpara)
             out=myodr.run()
             #print(out)
             popt = out.beta
-            self._a=popt[0]
-            self._tau_0=popt[1]
-            self._N_c =popt[2]
-            self._N_Yinf = popt[3]
-            self._tau_y=popt[4]
+            pcov = out.sd_beta
+            perr = out.sd_beta
             
-            print('a',"{:.2e}".format(self.a))
-            print('tau_0',"{:.2e}".format(self.tau_0))
-            print('N_c',"{:.2e}".format(self.N_c))
-            print('N_Yinf',"{:.2e}".format(self.N_Yinf))
-            print('tau_y',"{:.2e}".format(self.tau_y))
+        else:             
+            popt, pcov = curve_fit(self._spo_NEfffunc, self._x, self._y/self.yscale, 
+                      p0=startpara,
+                      sigma=self._ycov/self.yscale, 
+                      absolute_sigma=True,
+                      bounds = [5*[0.],5*[1e6]]
+                      )
+            perr = np.sqrt(np.diag(pcov))
         
-            return
+        NA0,tau_a, NY0, tau_y, NC0 = popt
+        sdNA0,sdtau_a, sdNY0, sdtau_y, sdNC0 = perr
         
-        popt, _ = curve_fit(self.__DNeff, x, y)
-        print(popt)
-        self._a=popt[0]
-        self._tau_0=popt[1]
-        self._N_c =popt[2]
-        self._N_Yinf = popt[3]
-        self._tau_y=popt[4]
+        self.cov = pcov
         
+        self.fittedparas={
+            'g_a': NA0/phi*self.NA0_scale, 
+            'tau_a': tau_a*self.tau_a_scale, 
+            'N_C+N_{Eff,0}': NC0*self.NC0_scale, 
+            'g_y': NY0/phi*self.NY0_scale, 
+            'tau_y': tau_y*self.tau_y_scale,
+            
+            'sd_g_a': sdNA0/phi*self.NA0_scale, 
+            'sd_tau_a': sdtau_a*self.tau_a_scale, 
+            'sd_N_C+N_{Eff,0}': sdNC0*self.NC0_scale, 
+            'sd_g_y': sdNY0/phi*self.NY0_scale, 
+            'sd_tau_y': sdtau_y*self.tau_y_scale
+            }
+        
+    def getParameters(self):    
+        return self.fittedparas
+    def collapseNC(self):
+        pass
+        
+
+class AnnealingFitter(object):
+    def __init__(self, useodr=False):
+        self._g_a=0.02
+        self._tau_a=15.
+        self._N_C =1e12
+        #self._c = 5e-13
+        #self._g_c = 1.5e-2
+        self._g_y = 0.05
+        self._tau_y=1e3
+        
+        self._t = None
+        self._terr = None
+        self._NEff = None
+        self._NEfferr = None
+        self._phi =None
+        self._NEff0 = None
+        
+        self._sd_t = None
+        self._sd_terr = None
+        self._sd_NEff = None
+        self._sd_NEfferr = None
+        self._sd_phi =None
+        self._sd_NEff0 = None
+        self._splits = [0]
+        
+        self.useodr=useodr
+        
+    def setInputAndFit(self,t,terr, NEffin,NEfferr,phi,NEff0, splits=None):
+        assert t.shape == NEffin.shape and NEffin.shape == phi.shape and phi.shape == NEff0.shape
+        assert t.shape == terr.shape
+        assert NEffin.shape[0] == NEfferr.shape[0]
+        
+        self._t=t 
+        self._terr = terr
+        self._NEff = NEffin
+        self._NEfferr = NEfferr
+        self._phi = phi
+        self._NEff0 = NEff0
+        self._splits=None
+        if splits is not None:
+            self._splits = splits
+        #self._NEfffunc([self._g_a, self._tau_a, self._N_C, 
+        #                self._c, self._g_c, self._g_y, 
+        #                self._tau_y],
+        #               self._t)
+        
+        self._fit()
+        #print(self._g_a, self._tau_a, self._N_C, self._c, self._g_c, self._g_y, self._tau_y)
+        
+    def _NEfffunc(self, B, t):
+        if (not self._splits is None) and len(self._splits) > 1:
+            g_a, tau_a, g_y, tau_y, *N_C = B
+        else:
+            g_a, tau_a, g_y, tau_y, N_C = B
+        return self.__NEff( g_a, tau_a, g_y, tau_y, N_C, t, self._phi, self._NEff0)
+    
+    def _spo_NEfffunc(self, t, *B):
+        if (not self._splits is None) and len(self._splits) > 1:
+            g_a, tau_a, g_y, tau_y, *N_C = B
+        else:
+            g_a, tau_a, g_y, tau_y, N_C = B
+        return self.__NEff( g_a, tau_a, g_y, tau_y, N_C, t, self._phi, self._NEff0)
+        
+    def __NEff(self, g_a, tau_a, g_y, tau_y, N_C, t, phi, NEff0,tileNC=True):
+        #expand N_C
+        #print(len(N_C),len(self._splits))
+        N_Ctiled = []
+        if isinstance(N_C, float):
+            tileNC=False
+        if tileNC:
+            for i in range(len(self._splits)-1):
+                n = self._splits[i+1]-self._splits[i]
+                N_Ctiled.append(np.ones(n, dtype='float')*N_C[i])
+            N_Ctiled = np.concatenate(N_Ctiled,axis=0)
+        else:
+            N_Ctiled = N_C
+        
+        N_A = phi*g_a * np.exp(-t / tau_a)
+        N_Y = g_y*phi * (1. - 1./(1 + t/tau_y))
+        #print(N_A.shape, N_Y.shape)
+        return N_A + N_Ctiled + N_Y + NEff0
+        
+    def NEff(self,t,phi,NEff0,NC):
+        g_a, tau_a, g_y, tau_y, N_C = self._g_a, self._tau_a, self._g_y, self._tau_y, NC
+        return self.__NEff( g_a, tau_a, g_y, tau_y, N_C, t, phi, NEff0,tileNC=False)
+     
+    def collapseNC(self):
+        self._N_C = float(np.mean(self._N_C))
+        self._sd_N_C  = float(np.mean(self._sd_N_C ))
+
+    #gives back all variations
+    def dNEff(self,t,phi,NEff0):    
+        dneff=[]
+        varsarr = np.array([self._g_a,    self._tau_a,    self._g_y,    self._tau_y, self._N_C ]       )
+        sds  = self.cov
+        
+        #totalerr=0.
+        #for i in range(len(varsarr)):
+        #    for j in range(len(sds)):
+        #        
+        #    mask = np.zeros_like(sds)
+        #    mask[i] = 1.
+        #    thesevars = varsarr + mask*sds
+        #    up = self.__NEff(*thesevars, t,phi,NEff0)
+        #    mask[i] = -1.
+        #    thesevars = varsarr + mask*sds
+        #    down = self.__NEff(*thesevars, t,phi,NEff0)
+        #    dneff.append([up,down])
+        return dneff
+
+
+    def spo_fit(self):
+        #curve_fit
+        N_Cs = [self._N_C]
+        if self._splits is not None:
+            N_Cs = [self._N_C for _ in range(len(self._splits)-1)]
+
+        mydata = None
+        if len(self._NEfferr)>1:
+            mydata = odr.RealData(self._t, self._NEff, sx=self._terr, covy=self._NEfferr)
+        else:
+            mydata = odr.RealData(self._t, self._NEff, sx=self._terr, sy=self._NEfferr)
+        
+        startbeta = np.array([ self._g_a, self._tau_a, self._g_y, self._tau_y] +  N_Cs)
+                 
+        popt, pcov = curve_fit(self._spo_NEfffunc, self._t, self._NEff, 
+                  p0=startbeta,
+                  sigma=self._NEfferr, 
+                  absolute_sigma=True
+                  )
+        perr = np.sqrt(np.diag(pcov))
+        
+        self._g_a, self._tau_a,  self._g_y, self._tau_y, *self._N_C = popt
+        self._sd_g_a, self._sd_tau_a, self._sd_g_y, self._sd_tau_y, *self._sd_N_C = perr
+        
+        self.cov = pcov
+        
+    def _fit(self):
+        if self.useodr:
+            self.odr_fit()
+        else:
+            self.spo_fit()
+        
+        
+    def odr_fit(self):
+
+        m = odr.Model(self._NEfffunc)
+        
+        N_Cs = [self._N_C]
+        if self._splits is not None:
+            N_Cs = [self._N_C for _ in range(len(self._splits)-1)]
+
+        mydata = None
+        if len(self._NEfferr)>1:
+            mydata = odr.RealData(self._t, self._NEff, sx=self._terr, sy=np.sqrt(np.diagonal(self._NEfferr)))
+        else:
+            mydata = odr.RealData(self._t, self._NEff, sx=self._terr, sy=self._NEfferr)
+        
+        startbeta = np.array([ self._g_a, self._tau_a, self._g_y, self._tau_y] +  N_Cs)
+        myodr = odr.ODR(mydata, m, beta0=startbeta)
+        out=myodr.run()
+        #print(out)
+        popt = out.beta
+        self._g_a, self._tau_a,  self._g_y, self._tau_y, *self._N_C = popt
+        
+        errs = out.sd_beta
+        self._sd_g_a, self._sd_tau_a, self._sd_g_y, self._sd_tau_y, *self._sd_N_C = errs
+        
+        self.cov = out.cov_beta
+        
+
+        
+    def getParameters(self):    
+        return {
+            'g_a': self._g_a, 
+            'tau_a': self._tau_a, 
+            'N_C+N_{Eff,0}': self._N_C, 
+            'g_y': self._g_y, 
+            'tau_y': self._tau_y,
+            
+            'sd_g_a': self._sd_g_a, 
+            'sd_tau_a': self._sd_tau_a, 
+            'sd_N_C+N_{Eff,0}': self._sd_N_C, 
+            'sd_g_y': self._sd_g_y, 
+            'sd_tau_y': self._sd_tau_y
+            }
         
     
     
@@ -158,13 +559,15 @@ class alphaExtractor(object):
             return a*1e-19*x
         
         xs,ys,yerrs,diodes = self._createFitInputForTime(t_in_min)
+        if len(xs)<1:
+            print('no data found for', t_in_min)
+            return None, None
+        
         if plot:
             for i,d in enumerate(diodes):
                 plt.errorbar(xs[i],ys[i],yerrs[i],xs[i]*self.rel_fluence_uncertainty,
                              c=d.fluenceCol(),label=d.label(),marker='o')
                 
-                
-            
         m = odr.Model(linear)
         mydata = odr.RealData(xs, ys, sy=yerrs, sx = xs*self.rel_fluence_uncertainty)
         myodr = odr.ODR(mydata, m, beta0=[7.])
@@ -194,11 +597,11 @@ class alphaExtractor(object):
         if plotstring is not None:
             doplot=True
             
-        alphas, alphaserrs =[],[]
+        alphas, alphaserrs, validtimes =[],[],[]
         for i,t in enumerate(time_array_minutes):
             plt.close()
             a,aerr = self.extractAlphaForTime(t,plot=doplot)
-            if doplot:
+            if doplot and a is not None:
                 
                 handles, labels = plt.gca().get_legend_handles_labels()
                 unique = [(h, l) for i, (h, l) in enumerate(zip(handles, labels)) if l not in labels[:i]]
@@ -211,9 +614,10 @@ class alphaExtractor(object):
                 plt.savefig(plotstring+'_'+str(t)+'min.pdf')
                 plt.close()
             if a is not None:
+                validtimes.append(t)
                 alphas.append(a)
                 alphaserrs.append(aerr)
-        return np.array(alphas),np.array(alphaserrs)
+        return np.array(alphas),np.array(alphaserrs),np.array(validtimes)
         
 
 class Linear(object):

@@ -4,14 +4,16 @@ import matplotlib.pyplot as plt
 import math
 fontsize=12
 
-axes = {'labelsize': fontsize,
-        'titlesize': fontsize}
+def setstyles():
+    axes = {'labelsize': fontsize,
+            'titlesize': fontsize}
+    
+    matplotlib.rc('axes', **axes)
+    matplotlib.rc('legend',fontsize=fontsize)
+    matplotlib.rc('xtick',labelsize=fontsize)
+    matplotlib.rc('ytick',labelsize=fontsize)
 
-matplotlib.rc('axes', **axes)
-matplotlib.rc('legend',fontsize=fontsize)
-matplotlib.rc('xtick',labelsize=fontsize)
-matplotlib.rc('ytick',labelsize=fontsize)
-
+setstyles()
 
 def addModifiedXAxis(xs, func,  label):
     import numpy as np
@@ -26,5 +28,19 @@ def addModifiedXAxis(xs, func,  label):
     ax.set_xlim(func(lims))
     ax.set_xlabel(label)
     return ax
+    
+    
+    
+def createManualLegends(
+        markertuples :list
+        ):
+    
+    import matplotlib.lines as mlines
+    
+    handles=[]
+    for mt in markertuples:
+        l = mlines.Line2D([], [], **mt, linestyle='None')
+        handles.append(l)
+    return handles
     
     

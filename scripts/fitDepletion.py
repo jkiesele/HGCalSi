@@ -1,6 +1,7 @@
 #!/usr/bin/python3
 
 from argparse import ArgumentParser
+import styles
 import os
 import pickle 
 parser = ArgumentParser()
@@ -95,14 +96,17 @@ plt.close()
 ivpl = curvePlotter(mode="IV",path=globalpath)
 ivpl.addPlotFromFile(args.inputDir+"/*.iv",label="I")
 xs,ys = ivpl.getXYSmooth()
-plt.title(d.no + ', '+str(t)+' min')
+plt.plot(-xs,-ys, label='I (smooth)')
+plt.title(d.paperlabel() + ', '+str(t)+' min')
+plt.legend()
+ivpl.savePlot(outprefix+"_iv.pdf",True)
 
 ivgr = curvePlotter(mode="IVGR",path=globalpath)
 ivgr.addPlotFromFile(args.inputDir+"/*.iv",label="I_GR")
 _,ygr = ivgr.getXYSmooth()
 plt.plot(-xs,-ys, label='I (smooth)')
 plt.legend()
-ivpl.savePlot(outprefix+"_iv.pdf",True)
+ivpl.savePlot(outprefix+"_ivgr.pdf",True)
 
 data = {'iv_x': ivpl.x,
         'iv_y': ivpl.y,

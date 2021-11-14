@@ -40,7 +40,7 @@ dataEPI = pointsets.getInterpolatedXYsDiodes("IperVolume",
 
 alldata=[]
 i=0
-for savestring, data, c in zip(['FZ','EPI+FZ','EPI'],[dataFZ,dataAll,dataEPI],['tab:orange','tab:blue','tab:green']):
+for savestring, data, c in zip(['FZ','EPI'],[dataFZ,dataEPI],['tab:orange','tab:green']):
     extractor = alphaExtractor(interpolated_pointset_dict=data,
                                 rel_fluence_uncertainty=1e-1)
     
@@ -48,7 +48,7 @@ for savestring, data, c in zip(['FZ','EPI+FZ','EPI'],[dataFZ,dataAll,dataEPI],['
     #set some offsets so the plot can be read better
     times =  [10+i/3,30+3*i/3,80+8*i/3, 100+10*i/3, 150+15*i/3, 250+25*i/3, 380+38*i/3, 640+64*i/3]
     
-    alphas, alphaerrs = extractor.extractAlpha(times,plotstring=outdir+'alphafit_'+savestring)
+    alphas, alphaerrs,times = extractor.extractAlpha(times,plotstring=outdir+'alphafit_'+savestring)
     
     alldata.append((times, alphas, alphaerrs, savestring, c))
     i+=1.
@@ -78,15 +78,31 @@ for t,a,ae,sstr,color in alldata:
 
 
 plt.close()
+
+import styles
+
 for t,a,ae,sstr,color in alldata:
     plt.errorbar(t,a,yerr=np.sqrt((0.1*a)**2+ ae**2) ,
                  linestyle=None,linewidth=0,elinewidth=2.,label=None,alpha=0.2,color=color)
     
     plt.errorbar(t,a,yerr=ae,marker='o',
                  linestyle=None,linewidth=0,elinewidth=2.,label=sstr,color=color)
+    
 plt.legend()
 plt.xlabel('Annealing time @ 60˚C [min]')
 plt.ylabel(r'$\alpha$ [$10^{-19}$ A/cm]')
 plt.xscale('log')
 plt.tight_layout()
 plt.savefig(outdir+"annealing_alpha.pdf")
+
+plt.errorbar([10], [7.675], yerr=[0.2], xerr=[0.], marker='x',linewidth=0,elinewidth=2.,
+                         label='6" DD (TDR)')
+
+plt.legend()
+plt.tight_layout()
+plt.savefig(outdir+"annealing_alpha_TDR.pdf")
+
+
+
+
+
