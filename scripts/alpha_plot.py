@@ -9,6 +9,8 @@ from pointset import interpolatedPointSet
 from fitting import alphaExtractor
 
 
+styles.setstyles(16)
+
 datadir=os.getenv("DATAOUTPATH")
 outdir=os.getenv("DATAOUTPATH")+'/alpha_plots/'
 os.system('mkdir -p '+outdir)

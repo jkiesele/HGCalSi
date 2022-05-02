@@ -3,7 +3,31 @@ import math
 import numpy as np
 
 
-def radiation_annealing_Ljubljana(radtime, plot=False):
+# data here
+_pre_ann={
+    9.9e14: 12.4,#keep this
+    1.4e15: 7.8,#keep this
+    1.8e15: 20,#keep
+    2.1e15: 20,#keep
+    }
+
+#from JSI
+_rad_times={
+    5e14: 5.7,
+    6.5e14: 7.4,
+    1e15: 10.8,
+    1.5e15: 16.2,
+    2.5e15: 27.5,
+    1e16: 108
+    }
+
+_rad_temp_low=45
+_rad_temp=50
+_rad_temp_hi=55
+
+
+
+def radiation_annealing_Ljubljana(radtime, plot=False, maxtemp=45):
     
     import alpha_calc #this cpython lib import might not work on all machine sin the same way
 
@@ -19,10 +43,10 @@ def radiation_annealing_Ljubljana(radtime, plot=False):
     
     
     def rising(t_in_minutes):
-        return 45. - 25.*math.exp( - (t_in_minutes)/3.5 ) 
+        return maxtemp - 25.*math.exp( - (t_in_minutes)/3.5 ) 
     
     def falling(t_in_minutes,last_risen):
-        return (20.+(last_risen-45.))*math.exp( - (t_in_minutes - radtime)/8 ) + 25
+        return ((maxtemp-25)+(last_risen-maxtemp))*math.exp( - (t_in_minutes - radtime)/8 ) + 25
     
     xr = [i for i in rising_annealing]
     xf = [i for i in falling_annealing]
@@ -61,32 +85,9 @@ def radiation_annealing_Ljubljana(radtime, plot=False):
 
 diodes={}
 
-_old_pre_ann={
-    5.0e14: 0.5,
-    6.5e14: 0.7,
-    9.9e14: 12.4,
-    1.0e15: 1,
-    1.4e15: 7.8,
-    1.5e15: 1.7,
-    1.8e15: 20,
-    2.1e15: 20,
-    2.5e15: 3,
-    1.0e16: 14
-    }
 
-#updated taking into account the rise
-_pre_ann={
-    5.0e14: 0.5,
-    6.5e14: 0.6,
-    9.9e14: 12.4,
-    1.0e15: 0.9,
-    1.4e15: 7.8,
-    1.5e15: 1.3,
-    1.8e15: 20,
-    2.1e15: 20,
-    2.5e15: 2.1,
-    1.0e16: 7
-    }
+#for k in _pre_ann.keys():
+#    _pre_ann[k]*=10.
 
 fluence_colours = None
 
@@ -100,8 +101,28 @@ class diode(object):
         self.rad=rad
         self.no=str(no)
         self.thickness=thickness
-        self.ann_offset=_pre_ann[rad]
-        self.ann_offset_error=1
+        self.radtime = -1.
+        self.ann_offset = 0.
+        self.ann_offset_up = 0.
+        self.ann_offset_down = 0.
+        ## ## ##
+        if rad in _pre_ann.keys():
+            self.ann_offset=_pre_ann[rad]
+            self.ann_offset_up = _pre_ann[rad]
+            self.ann_offset_down = _pre_ann[rad]
+        else:
+            if not rad in _rad_times.keys():
+                raise ValueError("diode: fluence value not associated with irradiation time")
+            self.radtime = _rad_times[rad]
+            self.ann_offset = radiation_annealing_Ljubljana(self.radtime,False,_rad_temp)  
+            self.ann_offset_up = radiation_annealing_Ljubljana(self.radtime,False,_rad_temp_hi)  
+            self.ann_offset_down = radiation_annealing_Ljubljana(self.radtime,False,_rad_temp_low)  
+        
+        self.ann_offset_error = np.max([np.abs(self.ann_offset-self.ann_offset_up) ,
+                                        np.abs(self.ann_offset-self.ann_offset_down)])
+        self.ann_offset_error=np.sqrt(1.+self.ann_offset_error**2)
+        
+        
         self.area=0.2595 # sensor area in cm2 
         self.material=material
         self.udep_norad=1
@@ -134,7 +155,15 @@ class diode(object):
     def label(self):
         return self.no+', '+self.radstr()
     
-    def paperlabel(self, addfluence=True):
+    def paperlabel(self, 
+                   mode='',
+                   addfluence=True):
+        
+        if mode == 'fluence':
+            return self.rad_str()
+        if mode == 'material,fluence':
+            return self.material_str()+' '+self.rad_str()
+        
         if addfluence:
             return self.thickness_str()+' '+self.material_str()+' '+self.rad_str()
         else:
@@ -148,6 +177,12 @@ class diode(object):
     
     def material_str(self):
         return self.material
+    
+    def __str__(self):
+        roffs = round(self.ann_offset,1)
+        roffserrup = round(self.ann_offset_up-self.ann_offset,1)
+        roffserrdown = round(self.ann_offset-self.ann_offset_down,1)
+        return self.label() + ", ann_offset " + str(roffs) +" $\\pm^{"+ str(roffserrup)+"}_{"+str(roffserrdown)+"}$"
     
     @property
     def thickness_cm(self):
@@ -258,7 +293,9 @@ def _make_colours():
 
 fluence_colours = _make_colours()
 
-
+def print_all_diodes():
+    for k in diodes.keys():
+        print(k, diodes[k])
 
 
 

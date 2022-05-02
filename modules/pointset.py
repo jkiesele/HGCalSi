@@ -97,6 +97,7 @@ class pointSet(object):
             current_at=[]
             for p in self.points:
                 current_at.append(p.data['depletion_nominal'])
+                #print('depl voltage', p.diode.label(),p.data['depletion_nominal'])
                 current_at_up.append(p.data['depletion_up'])
                 current_at_down.append(p.data['depletion_down'])
         elif mode == "I" or mode == "IperFluence" or mode == "ItimesThickness" or mode == "IperThickness"or mode == "IperVolume":
@@ -140,6 +141,7 @@ class pointSet(object):
 
                 idx, good = self._get_closest_point(xnp, current_at[i])
                 if not good:
+                    print('could not get point for', current_at[i],'V', p.diode.label(),' - maybe just out of measurement range')
                     continue 
                 idx_up, good = self._get_closest_point(xnp, current_at_up[i])
                 if not good:
@@ -375,6 +377,8 @@ class pointSetsContainer(object):
                 'diode': ps.diode(),
                 't': x,
                 'terr':xerrs,
+                't_odown': x - ps.diode().ann_offset + ps.diode().ann_offset_up,
+                't_oup': x - ps.diode().ann_offset + ps.diode().ann_offset_down,
                 'y':y,
                 'yerr':yerrs
                 })
@@ -415,7 +419,8 @@ class pointSetsContainer(object):
         return out
         
     def addToPlot(self,mode, whichsets,add=[],marker='o',colors=None,linestyle='',
-                  linewidth=None,current_at=None, add_rel_y_unc=None,labels=None):
+                  linewidth=None,current_at=None, add_rel_y_unc=None,labels=None,
+                  labelmode=''):
         while len(add) < len(whichsets):
             add.append("")
         if colors is not None and colors == 'fluence':
@@ -435,7 +440,7 @@ class pointSetsContainer(object):
                 yerr = np.array(yerr)
                 yerr = np.sign(yerr)*np.sqrt( yerr**2 + (np.expand_dims(y,axis=0)*add_rel_y_unc)**2 )
             if l is None:
-                l = ps.diode().paperlabel()+addstr
+                l = ps.diode().paperlabel(labelmode)+addstr
             plt.errorbar(x, y,  yerr=yerr, xerr=xerr,label=l,
                          linewidth=linewidth,marker=marker,linestyle=linestyle,
                          color=c)

@@ -235,13 +235,15 @@ class SimpleAnnealingFitter(object):
         self.yscale = 1e0
     
     def _NEfffunc(self, B, t):
-        NA0,tau_a, NY0, tau_y, NC0 = B
+        NA0,tau_a, NY0, tau_y, t0, NC0 = B
         
         NA0*=self.NA0_scale
         tau_a*=self.tau_a_scale
         NY0*=self.NY0_scale
         tau_y*=self.tau_y_scale
         NC0*=self.NC0_scale
+        
+        #t+=t0
         
         N_A = NA0 * np.exp(-t / tau_a)
         N_Y = NY0 * (1. - 1./(1 + t/tau_y))
@@ -258,6 +260,7 @@ class SimpleAnnealingFitter(object):
                                d['tau_a']/self.tau_a_scale,
                                d['g_y']*phi/self.NY0_scale,
                                d['tau_y']/self.tau_y_scale,
+                               d['t0'],
                                d['N_C+N_{Eff,0}']/self.NC0_scale,
                                ], 
                               t)
@@ -272,6 +275,7 @@ class SimpleAnnealingFitter(object):
                     1., #15.,   #tau_a, 
                     1., #np.max(self._y)-np.min(self._y),   #NY0, 
                     1., #1e3,   #tau_y, 
+                    0.,#t0
                     1. #np.min(self._y)   #NC0
              ])
         
@@ -295,12 +299,13 @@ class SimpleAnnealingFitter(object):
                       p0=startpara,
                       sigma=self._ycov/self.yscale, 
                       absolute_sigma=True,
-                      bounds = [5*[0.],5*[1e6]]
+                      bounds = [6*[0.],4*[1e6]+[0.1]+[1e6]],
+                      method='trf'
                       )
             perr = np.sqrt(np.diag(pcov))
         
-        NA0,tau_a, NY0, tau_y, NC0 = popt
-        sdNA0,sdtau_a, sdNY0, sdtau_y, sdNC0 = perr
+        NA0,tau_a, NY0, tau_y, t0, NC0 = popt
+        sdNA0,sdtau_a, sdNY0, sdtau_y, sdt0, sdNC0 = perr
         
         self.cov = pcov
         
@@ -310,12 +315,14 @@ class SimpleAnnealingFitter(object):
             'N_C+N_{Eff,0}': NC0*self.NC0_scale, 
             'g_y': NY0/phi*self.NY0_scale, 
             'tau_y': tau_y*self.tau_y_scale,
+            't0':t0,
             
             'sd_g_a': sdNA0/phi*self.NA0_scale, 
             'sd_tau_a': sdtau_a*self.tau_a_scale, 
             'sd_N_C+N_{Eff,0}': sdNC0*self.NC0_scale, 
             'sd_g_y': sdNY0/phi*self.NY0_scale, 
-            'sd_tau_y': sdtau_y*self.tau_y_scale
+            'sd_tau_y': sdtau_y*self.tau_y_scale,
+            'sd_t0':sdt0
             }
         
     def getParameters(self):    
@@ -326,6 +333,7 @@ class SimpleAnnealingFitter(object):
 
 class AnnealingFitter(object):
     def __init__(self, useodr=False):
+        self._t0 = 0.
         self._g_a=0.02
         self._tau_a=15.
         self._N_C =1e12
@@ -341,6 +349,7 @@ class AnnealingFitter(object):
         self._phi =None
         self._NEff0 = None
         
+        self._sdt0 = None
         self._sd_t = None
         self._sd_terr = None
         self._sd_NEff = None
@@ -375,21 +384,22 @@ class AnnealingFitter(object):
         
     def _NEfffunc(self, B, t):
         if (not self._splits is None) and len(self._splits) > 1:
-            g_a, tau_a, g_y, tau_y, *N_C = B
+            g_a, tau_a, g_y, tau_y, t0, *N_C = B
         else:
-            g_a, tau_a, g_y, tau_y, N_C = B
-        return self.__NEff( g_a, tau_a, g_y, tau_y, N_C, t, self._phi, self._NEff0)
+            g_a, tau_a, g_y, tau_y, t0, N_C = B
+        return self.__NEff( g_a, tau_a, g_y, tau_y, N_C, t, self._phi, self._NEff0,t0)
     
     def _spo_NEfffunc(self, t, *B):
         if (not self._splits is None) and len(self._splits) > 1:
-            g_a, tau_a, g_y, tau_y, *N_C = B
+            g_a, tau_a, g_y, tau_y, t0, *N_C = B
         else:
-            g_a, tau_a, g_y, tau_y, N_C = B
-        return self.__NEff( g_a, tau_a, g_y, tau_y, N_C, t, self._phi, self._NEff0)
+            g_a, tau_a, g_y, tau_y, t0, N_C = B
+        return self.__NEff( g_a, tau_a, g_y, tau_y, N_C, t, self._phi, self._NEff0,t0)
         
-    def __NEff(self, g_a, tau_a, g_y, tau_y, N_C, t, phi, NEff0,tileNC=True):
+    def __NEff(self, g_a, tau_a, g_y, tau_y, N_C, t, phi, NEff0,t0=0,tileNC=True):
         #expand N_C
         #print(len(N_C),len(self._splits))
+        t+=t0
         N_Ctiled = []
         if isinstance(N_C, float):
             tileNC=False
@@ -447,7 +457,7 @@ class AnnealingFitter(object):
         else:
             mydata = odr.RealData(self._t, self._NEff, sx=self._terr, sy=self._NEfferr)
         
-        startbeta = np.array([ self._g_a, self._tau_a, self._g_y, self._tau_y] +  N_Cs)
+        startbeta = np.array([ self._g_a, self._tau_a, self._g_y, self._tau_y, self._t0] +  N_Cs)
                  
         popt, pcov = curve_fit(self._spo_NEfffunc, self._t, self._NEff, 
                   p0=startbeta,
@@ -456,8 +466,8 @@ class AnnealingFitter(object):
                   )
         perr = np.sqrt(np.diag(pcov))
         
-        self._g_a, self._tau_a,  self._g_y, self._tau_y, *self._N_C = popt
-        self._sd_g_a, self._sd_tau_a, self._sd_g_y, self._sd_tau_y, *self._sd_N_C = perr
+        self._g_a, self._tau_a,  self._g_y, self._tau_y, self._t0, *self._N_C = popt
+        self._sd_g_a, self._sd_tau_a, self._sd_g_y, self._sd_tau_y, self._sdt0, *self._sd_N_C = perr
         
         self.cov = pcov
         
@@ -482,15 +492,15 @@ class AnnealingFitter(object):
         else:
             mydata = odr.RealData(self._t, self._NEff, sx=self._terr, sy=self._NEfferr)
         
-        startbeta = np.array([ self._g_a, self._tau_a, self._g_y, self._tau_y] +  N_Cs)
+        startbeta = np.array([ self._g_a, self._tau_a, self._g_y, self._tau_y, self._t0] +  N_Cs)
         myodr = odr.ODR(mydata, m, beta0=startbeta)
         out=myodr.run()
         #print(out)
         popt = out.beta
-        self._g_a, self._tau_a,  self._g_y, self._tau_y, *self._N_C = popt
+        self._g_a, self._tau_a,  self._g_y, self._tau_y, self._t0, *self._N_C = popt
         
         errs = out.sd_beta
-        self._sd_g_a, self._sd_tau_a, self._sd_g_y, self._sd_tau_y, *self._sd_N_C = errs
+        self._sd_g_a, self._sd_tau_a, self._sd_g_y, self._sd_tau_y, self._sdt0, *self._sd_N_C = errs
         
         self.cov = out.cov_beta
         
@@ -498,12 +508,15 @@ class AnnealingFitter(object):
         
     def getParameters(self):    
         return {
+            't0': self._t0, 
             'g_a': self._g_a, 
             'tau_a': self._tau_a, 
             'N_C+N_{Eff,0}': self._N_C, 
             'g_y': self._g_y, 
             'tau_y': self._tau_y,
             
+            
+            'sd_t0': self._sdt0, 
             'sd_g_a': self._sd_g_a, 
             'sd_tau_a': self._sd_tau_a, 
             'sd_N_C+N_{Eff,0}': self._sd_N_C, 

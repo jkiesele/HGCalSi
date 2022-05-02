@@ -2,9 +2,12 @@
 import matplotlib
 import matplotlib.pyplot as plt
 import math
-fontsize=12
 
-def setstyles():
+g_fontsize=14
+def setstyles(fontsize=14):
+    global g_fontsize
+    g_fontsize=fontsize
+    
     axes = {'labelsize': fontsize,
             'titlesize': fontsize}
     
@@ -12,6 +15,12 @@ def setstyles():
     matplotlib.rc('legend',fontsize=fontsize)
     matplotlib.rc('xtick',labelsize=fontsize)
     matplotlib.rc('ytick',labelsize=fontsize)
+
+def fontsize():
+    return g_fontsize
+
+def fontdict():
+    return  {'size': g_fontsize}
 
 setstyles()
 

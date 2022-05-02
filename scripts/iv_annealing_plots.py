@@ -14,6 +14,7 @@ os.system('mkdir -p '+outdir)
 
 addminus30=False
 
+styles.setstyles(13)
 
 def minat60ToDaysAt0(t):
     return convert60CTo0C(t/(60*24.))
@@ -44,9 +45,10 @@ def setAxisIV(ax,ylabel="-$I$ [A]",**legkwargs):
     
     plt.legend(**legkwargs)
     plt.legend()
+    plt.xlim(0.2,2500)
     plt.xscale('log')
-    plt.xlabel("time (60˚C) [min]", fontsize=12)
-    plt.ylabel(ylabel, fontsize=12)
+    plt.xlabel("time (60˚C) [min]")
+    plt.ylabel(ylabel)
     
     sax = ax.secondary_xaxis('top', functions=(minat60ToDaysAt21, identity))
     sax.set_xlabel("time (21˚C) [d]")
@@ -78,9 +80,11 @@ for U in (-600, -800, "Udep"):
     xs = pointsets.addToPlot("I", ["3003_UL","3007_UL","3008_UL"],
                         #colors=['tab:blue','tab:green','tab:orange'],
                     colors='fluence',
+                    labelmode='fluence',
                         current_at=U)
     setAxisIV(ax,"I("+voltstring+")[A]")
     plt.ylim([0,6e-5])
+    plt.text(.3, 5.5e-5, "120 µm EPI",fontdict=styles.fontdict())
     plt.tight_layout()
     plt.savefig(outdir+'120_'+str(U)+'.pdf')
     
@@ -117,24 +121,27 @@ for U in (-600, -800, "Udep"):
     ###########
     
     ax = newplot()
-    pointsets.addToPlot("I", ["2002_UL","2003_UL","2102_UL"],
+    pointsets.addToPlot("I", ["2002_UL","2003_UL","2102_UL"],[" UL"," UL"," UL"],
                         #colors=['tab:blue','tab:green','tab:orange'],
                     colors='fluence',
+                    labelmode='fluence',
                         current_at=U)
     xs = pointsets.addToPlot("I", ["2002_UR","2003_UR","2102_UR"],[" UR"," UR"," UR"],
                         #colors=['tab:blue','tab:green','tab:orange'],
                     colors='fluence',
                         marker='x',
+                    labelmode='fluence',
                         current_at=U)
     
     setAxisIV(ax,"I("+voltstring+")[A]")
     plt.ylim([0,3.5e-5])
+    plt.text(.3, 0.2e-5, "200 µm FZ",fontdict=styles.fontdict())
     plt.tight_layout()
     plt.savefig(outdir+'200_'+str(U)+'.pdf')
     
     
     ax = newplot()
-    pointsets.addToPlot("IperFluence", ["2002_UL","2003_UL","2102_UL"],
+    pointsets.addToPlot("IperFluence", ["2002_UL","2003_UL","2102_UL"],[" UL"," UL"," UL"],
                         #colors=['tab:blue','tab:green','tab:orange'],
                     colors='fluence',
                         current_at=U)
@@ -191,17 +198,20 @@ for U in (-600, -800, "Udep"):
     
     
     ax = newplot()
-    pointsets.addToPlot("I", ["1002_UL","1003_UL","1102_UL"],
+    pointsets.addToPlot("I", ["1002_UL","1003_UL","1102_UL"],[" UL"," UL"," UL"],
                         #colors=['tab:blue','tab:green','tab:orange'],
                     colors='fluence',
+                    labelmode='fluence',
                         current_at=U)
     xs = pointsets.addToPlot("I", ["1002_UR","1003_UR","1102_UR"],[" UR"," UR"," UR"],
                         #colors=['tab:blue','tab:green','tab:orange'],
                     colors='fluence',
                     marker='x',
+                    labelmode='fluence',
                         current_at=U)
     setAxisIV(ax,"I("+voltstring+")[A]")
     plt.ylim([0,2.1e-5])
+    plt.text(.3, 0.1e-5, "300 µm FZ",fontdict=styles.fontdict())
     plt.tight_layout()
     plt.savefig(outdir+'300_'+str(U)+'.pdf')
     
