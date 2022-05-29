@@ -7,6 +7,7 @@ import math
 
 def convertToCs(Cp, G, freq=10000):
 
+    print('converting with frequency',freq)
     #Cp=np.abs(Cp)
     #kappa=np.abs(kappa)
     omega = 2. * math.pi * freq
@@ -21,20 +22,19 @@ def convertToCs(Cp, G, freq=10000):
 
     
 class curvePlotter(object):
-    def __init__(self, mode, path="", read_freq=False):
+    def __init__(self, mode, path=""):
         assert mode == "CV" or mode == "IV" or mode=="CVs" or mode == 'IVGR'
         self.mode=mode
         self.plt=plt
         self.x=None
         self.y=None
-        self.read_freq=read_freq
+        
         if mode=="CVs":
             mode="CV"
-        self.fileReader=fileReader(mode=mode, path=path,return_freq=read_freq)
+        self.fileReader=fileReader(mode=mode, path=path,return_freq=True)
         if self.mode == "IVGR":
             self.mode="IV"
         
-        assert ( read_freq and ( mode=="CVs" or mode=="CV" ) ) or not read_freq
         
     def readFreq(self,infile):
         if not self.read_freq:
@@ -43,16 +43,14 @@ class curvePlotter(object):
         return freq
         
     def addPlotFromFile(self,infile, selection=None, min_x=None,max_x=None, noplot=False, **kwargs):
-        x,y,k = None, None, None
-        freq = 10000
-        if self.read_freq:
-            x,y,k, freq = self.fileReader.read(infile)
-        else:
-            x,y,k = self.fileReader.read(infile)
+        
+        x,y,k, freq = self.fileReader.read(infile)
         if self.mode == "CVs":
             y=convertToCs(y,k,freq)
+            print('converting using frequency',freq)
             y=1/y**2
         if self.mode == "CV":
+            print("WARNING: using plain CV mode without conversion.")
             y=1/y**2
         if selection is not None:
             x,y=selection(x,y)

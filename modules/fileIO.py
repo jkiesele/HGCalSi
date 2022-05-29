@@ -9,7 +9,7 @@ import glob
 def calibration(temp):
     return temp
 
-def readTempLog(filename, calib=False, readLast=True):
+def readTempLog(filename, calib=False, readLast=True, oldformat=False):
     x=[]
     y=[]
     z=[]
@@ -38,10 +38,11 @@ def readTempLog(filename, calib=False, readLast=True):
 
 
 class fileReader(object):
-    def __init__(self, mode="CV", path="", return_freq=False):
+    def __init__(self, mode="CV", path="", return_freq=True):
         self.mode=mode
         self.path=path
-        self.return_freq=return_freq
+        # return_freq is dummy for compat
+        assert return_freq #compat
         
     
     def readCV(self,filename):
@@ -64,9 +65,7 @@ class fileReader(object):
         
             if line == 'BEGIN': fill = True
             
-        if self.return_freq:
-            return np.array(V),np.array(C),np.array(kappa) ,freq 
-        return np.array(V),np.array(C),np.array(kappa)
+        return np.array(V),np.array(C),np.array(kappa) ,freq 
     
     def readIV(self,filename,GR=False):
         infile = open(self.path+filename, 'r')
@@ -85,7 +84,7 @@ class fileReader(object):
                     I.append(float(info[2]))
         
             if line == 'BEGIN': fill = True
-        return np.array(V),np.array(I), None
+        return np.array(V),np.array(I), None, None
 
 
     def read(self, filename):

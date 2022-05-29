@@ -2,6 +2,7 @@
 
 import numpy as np
 import matplotlib.pyplot as plt
+from copy import deepcopy as dc
 
 #test
 
@@ -37,6 +38,98 @@ after fit:
 
 
 from jax import numpy as jnp 
+
+
+
+class DNeff_calc(object):
+    def __init__(self,initvars: list, constdict: dict):
+        '''
+        give vars as list of tuples ('name', value)
+        '''
+        assert len(initvars)>0
+        assert isinstance(initvars[0],tuple)
+        assert len(initvars[0])==2
+        self.asso_i_to_str={ i: initvars[i][0] for i in range(len(initvars))}
+        self.asso_str_to_i={ initvars[i][0]: i  for i in range(len(initvars))}
+        self.vars={ t[0]:t[1] for t in initvars}
+        
+        self.constdict=constdict
+        
+    def name_to(self,name : str):
+        return self.asso_str_to_i[name]
+    
+    def list_to_dict(self,varl):
+        return { k: varl[self.asso_str_to_i[k]] for k in self.vars.keys() }
+    
+    def start_vals(self):
+        return [ self.vars[self.asso_i_to_str[i]] for i in range(len(self.vars)) ]
+        
+    def NC(self,x, varl):
+        return varl[self.name_to('g_c')]*self.constdict['phi']*jnp.ones_like(x) + self.constdict['NC0']
+    
+    def NA(self,x, varl):
+        return self.constdict['phi']*varl[self.name_to('g_a')] * jnp.exp(-x / (jnp.abs(varl[self.name_to('tau_a')])+1e-9))
+    
+    def NY(self,x, varl):
+        return varl[self.name_to('g_y')]*self.constdict['phi'] * (1. - 1./(1 + x/varl[self.name_to('tau_y')]))
+    
+    def eval(self,x, varl):
+        return self.NC(x,varl)+self.NA(x,varl)+self.NY(x,varl)
+    
+    def plot(self,x,varl):
+        plt.plot(x,self.NC(x,varl),label=r'$N_C$')
+        plt.plot(x,self.NA(x,varl),label=r'$N_A$')
+        plt.plot(x,self.NY(x,varl),label=r'$N_Y$')
+        plt.plot(x,self.eval(x,varl),label=r'$\Delta N_{eff}$')
+    
+class fitPoints(object):
+    
+    def __init__(self,x,y,yerr, functclass, direct_neighbour_corr = 0.5):
+        self.x=dc(x)
+        self.y=dc(y)
+        self.yerr=dc(yerr)
+        self.xerr=None
+        self.functclass=functclass
+        self.covinv = np.diag(np.ones_like(x))
+        
+        #just do brute force
+        for i in range(len(x)):
+            for j in range(len(x)):
+                if abs(i-j)==1:
+                    is_break = False
+                    if i>j:
+                        is_break = x[i]<x[j]
+                    if j>i:
+                        is_break = x[j]<x[i]
+                    if not is_break:
+                        self.covinv[i][j]=direct_neighbour_corr
+                 
+        print(self.covinv)   
+        # self.yerr: D
+        # self.cov: D x D
+        self.covinv = np.expand_dims(self.yerr,axis=0)* self.covinv * np.expand_dims(self.yerr,axis=1)
+        self.covinv = np.linalg.inv(self.covinv)
+        
+    def enlargeYErrs(self):
+        self.yerr *= 10.
+        
+    def chi2(self,varl):
+        
+        y = self.y
+        x = self.x
+        ys = self.functclass.eval(x,varl)
+        delta = ys-y
+        chi2 = jnp.expand_dims(delta,axis=0) * self.covinv * jnp.expand_dims(delta,axis=1)
+        return jnp.sum(chi2)
+    
+    def plot(self,varl=None):
+        #np.logspace()
+        xs = np.logspace(np.log(np.min(self.x)),np.log(np.max(self.x)),base=np.exp(1),num=200)
+        if varl is not None:
+            self.functclass.plot(xs,varl)
+        plt.errorbar(self.x,self.y,self.yerr,self.xerr,linewidth=0,marker='o',elinewidth=1,label='data')
+        
+
 class VarSet(object):
     '''
     Has points and the fit function definition
@@ -163,13 +256,15 @@ class VarSetSet(object):
                     self.varsets[i].vars[k+'_std'] = unc[ik]
         
     def createStartScale(self):
-        v = jnp.array(self.getVarList())
+        v = jnp.array(self.getVarList())*0. + 1.
         self.scaling = v
+        
         
     def scaleFittedVars(self, v):
         return jnp.array(v)*self.scaling
     
     def allSetChi2(self, v):
+            
         self.applyVarList(v*self.scaling)
 
         y = self.allSetYs()/self.yscale
@@ -177,7 +272,7 @@ class VarSetSet(object):
         for i in range(len(self.varsets)):
             ys.append(self.varsets[i].eval(self.varsets[i].xs)/self.yscale)
         ys = jnp.concatenate(ys,axis=0)
-        diff = (ys-y)**2/(self.allSetYErrs()/self.yscale)#DEBUG
+        diff = (ys-y)**2/(self.allSetYErrs()/self.yscale)**2#DEBUG
         return jnp.sum(diff)
     
         

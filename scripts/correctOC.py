@@ -3,27 +3,67 @@
 from argparse import ArgumentParser
 parser = ArgumentParser()
 parser.add_argument('inputFile')
-parser.add_argument('oldOCC')
-parser.add_argument('newOCC')
-parser.add_argument('oldOCG')
-parser.add_argument('newOCG')
+#parser.add_argument('oldOCC')
+parser.add_argument('--newOCC',default=-1)
+#parser.add_argument('oldOCG')
+parser.add_argument('--newOCG',default=-1)
+parser.add_argument('--overwrite',default=False,action='store_true')
 args = parser.parse_args()
 
-deltaC = float(args.oldOCC) - float(args.newOCC)
-deltaS = float(args.oldOCG) - float(args.newOCG)
+newOCC = float(args.newOCC)
+newOCG = float(args.newOCG)
+
+if args.newOCC < 0:#attempt defaults
+    from fileIO import fileReader
+    fr = fileReader(mode="CV",return_freq=True)
+    _,_,_, freq = fr.read(args.inputFile)
+    assert freq == 63 or freq == 500 or freq == 10000
+    if freq == 63:
+        newOCC = 4.9923e-11
+        newOCG = -0.00000000041296
+    if freq == 500:
+        newOCC = 4.9838e-11
+        newOCG = 0.00000000033576
+    if freq == 10000:
+        newOCC = 4.9756e-11
+        newOCG = 0.0000000020444
+        
+    print('using frequency',freq)
+    #exit()
+
+#read OC
+with open(args.inputFile) as f:
+    triggered=False
+    for l in f:
+        if ":LCR open correction" in l:
+            triggered=True
+            continue
+        if triggered:
+            l = l[:-1]
+            l = l.split(',')
+            print()
+            oldOCC = float(l[0])
+            oldOCG = float(l[1])
+            break
+
+
+
+deltaC = oldOCC - newOCC
+deltaS = oldOCG - newOCG
 
 import os 
-os.system('cp '+args.inputFile + ' '+ args.inputFile+'.backup')
+if args.overwrite:
+    os.system('cp '+args.inputFile + ' '+ args.inputFile+'.backup')
 
 out=["CONVERTED FROM DIFFERENT OPEN CORRECTION\n"]
-out.append("OLD: "+args.oldOCC+", "+args.oldOCG  +" NEW: "+args.newOCC+", "+args.newOCG+'\n')
+out.append("OLD: "+str(oldOCC)+", "+str(oldOCG)  +" NEW: "+str(newOCC)+", "+str(newOCG)+'\n')
 start=False
 with open(args.inputFile) as f:
     for l in f:
         #just copy
         if l=="CONVERTED FROM DIFFERENT OPEN CORRECTION\n":
             print("ALREADY CONVERTED, DON'T CONVERT TWICE")
-            exit
+            exit()
         if l=="BEGIN\n":
             start=True
             out.append(l)
@@ -44,8 +84,13 @@ with open(args.inputFile) as f:
         
 out.append('END\n')
 
+outfile = args.inputFile[:-3]+'_c.cv'
+if args.overwrite:
+    outfile = args.inputFile
+print(outfile)
 #print(out)
-with open(args.inputFile,'w') as f:
+#exit()
+with open(outfile,'w') as f:
     for l in out:
         f.write(l)
     

@@ -1,16 +1,22 @@
 #!/usr/bin/env python3
 
 import os
+
+import jax
+jax.config.update("jax_enable_x64", True)
 import matplotlib.pyplot as plt
 import styles
 import numpy as np
 from pointset import loadAnnealings
-from base_tools import VarSetSet, VarSet
+from base_tools import VarSetSet, VarSet, DNeff_calc, fitPoints
 
+from scipy.optimize import fmin 
 import scipy.odr as odr
 import pickle
 import styles
 styles.setstyles()
+
+from jax import numpy as jnp 
 
 datadir=os.getenv("DATAOUTPATH")
 outdir=os.getenv("DATAOUTPATH")+'/hamburg_model/'
@@ -38,6 +44,18 @@ samples  = [
             ["3003_UL"]
             ]
 
+allFZ = ["2002_UL","2002_UR","1003_UL","1003_UR"]+\
+            ["1002_UL","1002_UR"]+\
+            ["2003_UL","2003_UR","1102_UL", "1102_UR"]+\
+            ["2102_UL","2102_UR"]
+
+allEPI = ["3008_UL"] +["3007_UL"]+["3003_UL"]
+            
+
+#samples = [allFZ]
+
+yscaling = 1.
+
 #dataFZ = pointsets.getXYsDiodes("NEff", 
 #                                ["1102_UR","3007_UL","1002_UR","1003_UR",]#+
 #                                #["1002_UL","1003_UL","1102_UL",]
@@ -45,12 +63,13 @@ samples  = [
 #                              )
 #
 stdvars = {
-            'g_a': 1e-2,
+            'g_a': yscaling*1e-2/4.,
             'tau_a': 40.,
-            'g_c': 1e-3,
-            'g_y': 1e-1,
-            'tau_y': 2000.
+            'g_c': yscaling*1e-3/4.,
+            'g_y': yscaling* 5e-2/4.,
+            'tau_y': 5000.
         }
+
 def mergePoints(pset):
     ref = pset[0]
     for i in range(1,len(pset)):
@@ -59,12 +78,94 @@ def mergePoints(pset):
     return [ref]
 
 
+def make_single_fit(x,y,yerr,globalvars,localvars,plotstr=None,plottitle=None):
+    
+    x = np.array(x)
+    y = np.array(y)
+    yerr = np.array(yerr)
+    
+    #x *= 1.8
+    #y *= 1.8
+    #yerr *= 1.8
+    
+    fitfunc = DNeff_calc([ (str(k), stdvars[k]) for k in stdvars.keys() ], localvars)
+    fp = fitPoints(x, y, yerr, fitfunc, direct_neighbour_corr=0.5)
+    fplargey = fitPoints(x, y, yerr, fitfunc)
+    fplargey.enlargeYErrs()#for first fit
+    
+    if plotstr is not None and False:
+        fp.plot(fitfunc.start_vals())
+        plt.xscale('log')
+        plt.savefig(plotstr+'_pre.pdf')
+        plt.close()
+    
+    m = Minuit(jax.jit(fplargey.chi2), fitfunc.start_vals(), grad=jax.grad(fplargey.chi2))
+    m.limits = [(0,None) for _ in fitfunc.start_vals()]
+    m.strategy=1
+    m.migrad(iterate=10)
+    startvals=np.array(m.values)
+    #print(startvals)
+    
+    m = Minuit(jax.jit(fp.chi2), startvals, grad=jax.grad(fp.chi2))
+    m.strategy=2
+    o = m.migrad(iterate=10)
+    o = m.minos()
+
+    cov = np.array(m.covariance)
+    merrs = np.array(m.errors)
+    merrst = np.expand_dims(merrs,axis=0)
+    merrstt = np.expand_dims(merrs,axis=1)
+    merrstt = merrstt*merrst
+    corr = cov/merrstt
+    
+    fvals=np.array(m.values)
+    
+    resdict = fitfunc.list_to_dict(m.values)  ##vvs.getVarList(True)
+    errdict = fitfunc.list_to_dict(m.errors)
+    for k in errdict.keys():
+        resdict[k+'_std']=errdict[k]
+        
+    class fittedfunc(object):
+        def __init__(self,infittedvals):
+            self.fvals=infittedvals
+        def eval(self,x):
+            return fitfunc.eval(x, self.fvals)
+        
+    mint_std = []
+    for i in range(-1,len(m.values)):
+    #get minimum
+        if i<0:
+            minff=fittedfunc(fvals)
+            minx = fmin(minff.eval,np.array([120.]))[0]
+            resdict['mint']=minx
+        else:
+            mask = np.zeros_like(m.values)
+            mask[i]=1.
+            minff=fittedfunc(fvals+np.array(m.errors)*mask)
+            minx = fmin(minff.eval,np.array([120.]))[0]
+            mint_std.append(minx-resdict['mint'])
+        #create uncertainties
+    mint_std = np.array(mint_std)
+    resdict['mint_std']=np.sqrt(np.sum( mint_std[np.newaxis,...]*corr*mint_std[...,np.newaxis] ))
+    
+    if plotstr is not None:
+        fp.plot(fvals)
+        plt.xscale('log')
+        plt.legend()
+        plt.title(plottitle)
+        plt.savefig(plotstr+'.pdf')
+        plt.close()
+    
+    return resdict, [fp, fvals]
+
+    
+
 def makeData():
 
     allres=[]
-    for s in samples:
+    for ip,s in enumerate(samples):
     
-        globalvars = []#['tau_a', 'tau_y']
+        globalvars = ['g_a', 'tau_a', 'g_c', 'g_y', 'tau_y']#['tau_a', 'tau_y']
         
         
         print(s)
@@ -77,137 +178,46 @@ def makeData():
             print('NC0:',d['diode'].NEff_norad())
             NC0s.append(d['diode'].NEff_norad())
             
-        dataFZ = mergePoints(dataFZ)
+        d = mergePoints(dataFZ)[0]
         
-        def makefit(indicator = "",debugplot=False):
-            vvs = VarSetSet(globalvars)
-            
-            for d in dataFZ:
-                print(str(d['diode']))
-                print('NC0:',d['diode'].NEff_norad())
-                
-                if np.any(d['yerr']==0):
-                    print('at least one y error is zero')
-                
-                x = d['t']
-                if indicator == "oup":
-                    x = d['t_oup']
-                elif indicator == "odown":
-                    x = d['t_odown']
-                
-                vvs.addVarSet( VarSet(x, d['y'], d['yerr'], None, stdvars, {'phi': d['diode'].rad,
-                                                                                 'NC0' : d['diode'].NEff_norad()
-                                                                                 }) )
-                #vvs.addVarSet( VarSet(d['t'], d['y'], d['yerr'], d['terr'], stdvars) )
-            
-            
+        #print(d)
         
-            import jax
-            jax.config.update("jax_enable_x64", True)
-            vvs.createStartScale()#important
-            m = Minuit(jax.jit(vvs.allSetChi2), [1. for _ in vvs.getVarList()], grad=jax.grad(vvs.allSetChi2))
-            m.limits = [(0,None) for _ in vvs.getVarList()]
-            #m.parameters=vvs.getVarList(True).keys()
-            m.strategy=1
-            o = m.migrad(iterate=10)
-            print(o)
-            print(vvs.allSetYErrs())
-            print(m.minos())
-            vvs.applyVarList(vvs.scaleFittedVars(m.values))
-            cov = np.array(m.covariance)
-            merrs = np.array(m.errors)
-            merrst = np.expand_dims(merrs,axis=0)
-            merrstt = np.expand_dims(merrs,axis=1)
-            merrstt = merrstt*merrst
-            corr = cov/merrstt
+        yerr = d['yerr']#remove additional dim
+        if len(yerr.shape):
+            yerr = yerr[:,0]
             
-            #print(o)
-            resdict = vvs.getVarList(True)
-            print(vvs.getVarList(True))
-            print(vvs.getVarList())
-            print(vvs.scaleFittedVars(m.errors))
-            
-            if debugplot:
-                for v in vvs.varsets:
-                    print(indicator)
-                    v.debugPlot()
-                    v.debugPlotEval()
-                    xs = np.arange(np.min(v.xs),np.max(v.xs),2)
-                    plt.plot(xs,v.NC(xs))
-                    plt.plot(xs,v.NA(xs))
-                    plt.plot(xs,v.NY(xs))
-                    for n in NC0s:
-                        plt.plot(xs,xs*0.+n,linestyle='-.')
-                    plt.xscale('log')
-                    plt.show()
-                    plt.close()
-                  
-            from scipy.optimize import fmin  
-            mint_std = []
-            for i in range(-1,len(m.values)):
-            #get minimum
-                if i<0:
-                    v=vvs.varsets[0]#same by definition
-                    minx = fmin(v.eval,np.array([120.]))[0]
-                    resdict['mint']=minx
-                else:
-                    mask = np.zeros_like(m.values)
-                    mask[i]=1.
-                    vvss = vvs
-                    vvss.applyVarList(vvs.scaleFittedVars(m.values)+vvs.scaleFittedVars(m.errors)*mask)
-                    v=vvss.varsets[0]
-                    minx = fmin(v.eval,np.array([120.]))[0]
-                    mint_std.append(minx-resdict['mint'])
-                #create uncertainties
-            mint_std = np.array(mint_std)
-            
-                
-                
-            resdict['mint_std']=np.sqrt(np.sum( mint_std[np.newaxis,...]*corr*mint_std[...,np.newaxis] ))
-            print('min_t',resdict['mint'] , '+-',resdict['mint_std'])
-            resdict['diode']=dataFZ[0]['diode']
-            if len(indicator):
-                return resdict
-            
-            for k,e in zip(vvs.getVarList(True).keys(),vvs.scaleFittedVars(m.errors)):
-                resdict[k+'_std']=e
-                
-            
-            return resdict
+        print('data shapes',d['t'].shape, d['y'].shape, yerr.shape)
         
-        resdict = makefit()
-        roup = makefit("oup")
+        localvars = {'phi': d['diode'].rad,'NC0' : d['diode'].NEff_norad() }
+        resdict, v = make_single_fit(d['t'],d['y'],yerr,globalvars,localvars,
+                                     plotstr=outdir+'/'+str(ip),plottitle = d['diode'].radstr())
+        
+        roup, _ = make_single_fit(d['t_oup'],d['y'],yerr,globalvars,localvars,
+                                  plotstr=outdir+'/'+str(ip)+'_tup',plottitle = d['diode'].radstr())
+        rodown, _ = make_single_fit(d['t_odown'],d['y'],yerr,globalvars,localvars,
+                                     plotstr=outdir+'/'+str(ip)+'_tdown',plottitle = d['diode'].radstr())
+        
         for k in roup.keys():
             resdict[k+"_oup"]=roup[k]
-        rodown = makefit("odown")
         for k in rodown.keys():
             resdict[k+"_odown"]=rodown[k]
-            
-        #print(resdict.keys())
-        #exit()
+        
+        resdict['diode']=d['diode']
         
         allres.append(resdict)
         
-        #for v in vvs.varsets:
-        #    v.debugPlot()
-        #    v.debugPlotEval()
-        #    xs = np.arange(np.min(v.xs),np.ma#x(v.xs),2)
-        #    plt.plot(xs,v.NC(xs))
-        #    plt.plot(xs,v.NA(xs))
-        #    plt.plot(xs,v.NY(xs))
-        #    for n in NC0s:
-        #        plt.plot(xs,xs*0.+n,linestyle='-.')
-        #    plt.xscale('log')
-        #    #plt.show()
-        #    plt.close()
-        #exit()
+        # debug plot
         
+        
+        
+        
+    
     with open(outdir+'/data.pkl','wb') as f:
         pickle.dump(allres,f)
     print('saved to',outdir+'/data.pkl')
+    
    
-
-#makeData()
+makeData()
 #exit()
 
 #read dump
@@ -246,6 +256,8 @@ for var in varkeys:
     
     fig, ax = plt.subplots()
     #ax.set_title(var)
+    ymax=0
+    ymin=0
     
     for sel in ["FZ","EPI"]:
         
@@ -272,8 +284,14 @@ for var in varkeys:
         
         yerr = np.sqrt(np.array(yerr)[np.newaxis,...]**2 + (updown)**2)
         
+        yerrnew = np.where(np.abs(yerr)/3.>y,0.,yerr)
+        if not np.all(yerrnew == yerr):
+            print('\n\nWARNING SET SOME ERRORS TO ZERO!!!\n\n')
+            yerr = yerrnew
+        
         ax.errorbar(x,y,yerr,linewidth=0,marker='o',elinewidth=1,label=None,capsize=0,
                     color = col)
+        
         
         #for xi,yi, txt in zip(x,y,[r['diode'] for r in allres]):
         #    ax.annotate(txt, (xi,yi))
@@ -285,6 +303,7 @@ for var in varkeys:
     
         
     plt.legend() 
+    #plt.ylim([0,None])
     plt.tight_layout()
     plt.savefig(outdir+'/'+var+'.pdf')
     print('saved',outdir+'/'+var+'.pdf')

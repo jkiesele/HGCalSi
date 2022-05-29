@@ -15,11 +15,12 @@ from plotting import curvePlotter
 datadir=os.getenv("DATAOUTPATH")
 
 class point(object):
-    def __init__(self, diodequali: str, minutes: int, fileprefix='extracted', directory=None):
+    def __init__(self, diodequali: str, minutes: int, depl_freq, fileprefix='extracted', directory=None):
         self.diodequali=diodequali #3007_UL
         self.minutes=minutes
         self.fileprefix=fileprefix
         self.diode=diodes[diodequali[:4]]
+        self.depl_freq=depl_freq
 
         minutestr = str(minutes)+'min'
         if minutes==0 and self.diode.no != '6002':#different here...
@@ -51,16 +52,18 @@ class point(object):
         
     
     def getDepl(self):
-        return self.data['depletion_nominal'], self.data['depletion_nominal']-self.data['depletion_down'], self.data['depletion_up']-self.data['depletion_nominal']
-        
+        if self.depl_freq == 10000:
+            return self.data['depletion_nominal'], self.data['depletion_nominal']-self.data['depletion_down'], self.data['depletion_up']-self.data['depletion_nominal']
+        else:
+            return 0,0,0
 
 
 class pointSet(object):
-    def __init__(self, diodequali, minutes, fileprefix='extracted'):
+    def __init__(self, diodequali, minutes,depl_freq, fileprefix='extracted'):
         self.points=[]
         self.diodequali=diodequali
         for t in minutes:
-            self.points.append(point(diodequali,t,fileprefix=fileprefix))
+            self.points.append(point(diodequali,t,depl_freq,fileprefix=fileprefix))
 
     def diode(self):
         return self.points[0].diode
@@ -186,7 +189,7 @@ class pointSet(object):
             xerrdown.append(float(math.sqrt(p.diode.ann_offset_error**2 + (0.025*x)**2)))
             xerrup.append(float(math.sqrt(p.diode.ann_offset_error**2 + (0.025*x)**2))) 
             
-        return xs,[xerrdown,xerrup],ys,[yerrdown,yerrup]
+        return np.array(xs),np.array([xerrdown,xerrup]),np.array(ys),np.array([yerrdown,yerrup])
 
     @staticmethod
     def symmetrisePoints(xs,xerrs,ys,yerrs):
@@ -197,7 +200,7 @@ class pointSet(object):
         yerr = np.abs(yerr)
         yerr = np.max(yerr,axis=0)
         
-        return xs,[xerr,xerr],ys,[yerr,yerr]
+        return xs,np.array([xerr,xerr]),ys,np.array([yerr,yerr])
 
 
 #scratch area
@@ -461,33 +464,33 @@ class pointSetsContainer(object):
         return xs, xerrs, ys, yerrs
 
 
-def loadAnnealings():
+def loadAnnealings(depl_freq=10000):
     pointsets=pointSetsContainer()
 
-    pointsets.append(pointSet("6002_6in",[0,11,31,74, 103, 149, 386, 639, 1536]))
+    pointsets.append(pointSet("6002_6in",[0,11,31,74, 103, 149, 386, 639, 1536],depl_freq=depl_freq))
     
     kneepointset=pointSetsContainer()
-    kneepointset.append(pointSet("6002_6in",[0,11,31,74, 103, 149, 386, 639],fileprefix="firstknee"))
+    kneepointset.append(pointSet("6002_6in",[0,11,31,74, 103, 149, 386, 639],fileprefix="firstknee",depl_freq=depl_freq))
     
-    pointsets.append(pointSet("2002_UL",[0,73, 103, 153, 247, 378, 645, 1352, 2919]))
-    pointsets.append(pointSet("2003_UL",[0,73, 103, 153, 247, 378, 645, 1352, 2919]))
-    pointsets.append(pointSet("2102_UL",[0,73, 103, 153, 247, 378, 645, 1352, 2919]))
+    pointsets.append(pointSet("2002_UL",[0,73, 103, 153, 247, 378, 645, 1352, 2919],depl_freq=depl_freq))
+    pointsets.append(pointSet("2003_UL",[0,73, 103, 153, 247, 378, 645, 1352, 2919],depl_freq=depl_freq))
+    pointsets.append(pointSet("2102_UL",[0,73, 103, 153, 247, 378, 645, 1352, 2919],depl_freq=depl_freq))
     
-    pointsets.append(pointSet("1002_UL",[0, 103, 153, 247, 378, 645, 1352, 2919]))
-    pointsets.append(pointSet("1003_UL",[0,73, 103, 153, 247, 378, 645, 1352, 2919]))
-    pointsets.append(pointSet("1102_UL",[0,73, 103, 153, 247, 378, 645, 1352, 2919]))
+    pointsets.append(pointSet("1002_UL",[0, 103, 153, 247, 378, 645, 1352, 2919],depl_freq=depl_freq))
+    pointsets.append(pointSet("1003_UL",[0,73, 103, 153, 247, 378, 645, 1352, 2919],depl_freq=depl_freq))
+    pointsets.append(pointSet("1102_UL",[0,73, 103, 153, 247, 378, 645, 1352, 2919],depl_freq=depl_freq))
     
-    pointsets.append(pointSet("2002_UR",[0,10,30,74, 103, 149,243]))
-    pointsets.append(pointSet("2003_UR",[0,10,30,74, 103, 149,243]))
-    pointsets.append(pointSet("2102_UR",[0,10,30,74, 103,243, 386, 639, 1536])) #the 149 is flaud
+    pointsets.append(pointSet("2002_UR",[0,10,30,74, 103, 149,243],depl_freq=depl_freq))
+    pointsets.append(pointSet("2003_UR",[0,10,30,74, 103, 149,243],depl_freq=depl_freq))
+    pointsets.append(pointSet("2102_UR",[0,10,30,74, 103,243, 386, 639, 1536],depl_freq=depl_freq)) #the 149 is flaud
     
-    pointsets.append(pointSet("1002_UR",[0,10,30,74, 103, 149, 386, 639, 1536]))
-    pointsets.append(pointSet("1003_UR",[0,10,30,74, 103, 149,243, 386, 639, 1536]))
-    pointsets.append(pointSet("1102_UR",[0,10,30,74, 103, 149,243]))
+    pointsets.append(pointSet("1002_UR",[0,10,30,74, 103, 149, 386, 639, 1536],depl_freq=depl_freq))
+    pointsets.append(pointSet("1003_UR",[0,10,30,74, 103, 149,243, 386, 639, 1536],depl_freq=depl_freq))
+    pointsets.append(pointSet("1102_UR",[0,10,30,74, 103, 149,243],depl_freq=depl_freq))
     
-    pointsets.append(pointSet("3003_UL",[0,10,30,74, 103, 149,243, 386, 639, 1536]))
-    pointsets.append(pointSet("3007_UL",[0,10,30,74, 103, 149,243, 386, 639, 1536]))
-    pointsets.append(pointSet("3008_UL",[0,10,30,74, 103, 149,243, 386, 639, 1536]))
+    pointsets.append(pointSet("3003_UL",[0,10,30,74, 103, 149,243, 386, 639, 1536],depl_freq=depl_freq))
+    pointsets.append(pointSet("3007_UL",[0,10,30,74, 103, 149,243, 386, 639, 1536],depl_freq=depl_freq))
+    pointsets.append(pointSet("3008_UL",[0,10,30,74, 103, 149,243, 386, 639, 1536],depl_freq=depl_freq))
     
     
     return pointsets, kneepointset

@@ -187,6 +187,12 @@ class diode(object):
     @property
     def thickness_cm(self):
         return self.thickness / (1000. * 10.)
+    
+    def Cideal(self):
+        eps = 11.9
+        eps0 = 8.85E-14
+        return eps0*eps * self.area / self.thickness_cm 
+        
         
     def NEff(self, Vdep, Cend=None):
         

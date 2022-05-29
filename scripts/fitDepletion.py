@@ -4,8 +4,15 @@ from argparse import ArgumentParser
 import styles
 import os
 import pickle 
+
+defcvfile="*.cv"
+
 parser = ArgumentParser()
 parser.add_argument('inputDir')
+parser.add_argument('--cvfile', default=defcvfile)
+parser.add_argument('--Cp', default=False,  action='store_true')
+
+parser.add_argument('--var', type=float, default=10.)
 parser.add_argument('--rederive', default=False,  action='store_true')
 parser.add_argument('--ignoremissing', default=False,  action='store_true')
 parser.add_argument('--strictcheck', default=False,  action='store_true')
@@ -42,20 +49,30 @@ low_end = None
 low_start = None
 const_cap=None
 
-if args.rederive or (not os.path.isfile(outpath+args.outfile+".depl") and not args.ignoremissing):
+mode = "CVs"
+if args.Cp:
+    mode = "CV"
 
-    cv_plotter = curvePlotter(mode="CVs",path=globalpath)
-    cv_plotter.addPlotFromFile(args.inputDir+"/*.cv",
+if args.rederive or (not args.cvfile==defcvfile) or (not os.path.isfile(outpath+args.outfile+".depl") and not args.ignoremissing):
+
+    cv_plotter = curvePlotter(mode=mode,path=globalpath)
+    cv_plotter.addPlotFromFile(args.inputDir+"/"+args.cvfile,
                                    label="test")
     
+    
+    #read diode from inputdir
+    diodestr = args.inputDir[0:4]
+    from diodes import diodes
+    print('ideal capacitance',diodes[diodestr].Cideal(), '1/Cideal^2', 1/(diodes[diodestr].Cideal()**2))
+    
+    print('fit rising edge from to (positive)')
+    print('fit constant from to')
+    print('constant value (if any)')
     
     print('fit rising edge from to (positive)')
     print('fit constant from to')
     print('constant value (if any)')
     cv_plotter.showPlot()
-    print('fit rising edge from to (positive)')
-    print('fit constant from to')
-    print('constant value (if any)')
     high_end= - float(input())
     high_start= - float(input())
     low_end = - float(input())
@@ -78,7 +95,7 @@ else:
 d,t = getDiodeAndTime(args.inputDir)
 
 plt.title(d.no + ', '+str(t)+' min')
-v = getDepletionVoltage(globalpath+args.inputDir+"/*.cv",
+v = getDepletionVoltage(globalpath+args.inputDir+"/"+args.cvfile,
                         min_x=-900,
                         const_cap=const_cap,
                         debug=True,
@@ -86,11 +103,16 @@ v = getDepletionVoltage(globalpath+args.inputDir+"/*.cv",
                         low_end = low_end,
                         high_start = high_start,
                         high_end = high_end,
+                        variation = float(args.var),
                         strictcheck=args.strictcheck,
                         savedatapath=outprefix+".depl",
+                        mode=mode,
                         interactive=not args.batch)
 
 
+if not defcvfile == args.cvfile:
+    exit()
+    
 #smoothen IV curves and save as dicts for easy processing
 plt.close()
 ivpl = curvePlotter(mode="IV",path=globalpath)

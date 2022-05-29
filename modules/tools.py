@@ -65,9 +65,10 @@ def getDepletionVoltage(filename, debug=True,
                         savedatapath=None,
                         variation=10,
                         strictcheck=True,
-                        interactive=False
+                        interactive=False,
+                        mode = "CVs"
                         ):
-    pl = curvePlotter(mode="CVs")
+    pl = curvePlotter(mode=mode)
     pl.addPlotFromFile(filename, min_x=min_x,max_x=max_x, noplot=True)
     
     df = DepletionFitter(x=pl.x, y=pl.y, 
