@@ -63,8 +63,10 @@ if args.rederive or (not args.cvfile==defcvfile) or (not os.path.isfile(outpath+
     #read diode from inputdir
     diodestr = args.inputDir[0:4]
     from diodes import diodes
-    print('ideal capacitance',diodes[diodestr].Cideal(), '1/Cideal^2', 1/(diodes[diodestr].Cideal()**2))
-    
+    try:
+        print('ideal capacitance',diodes[diodestr].Cideal(), '1/Cideal^2', 1/(diodes[diodestr].Cideal()**2))
+    except:
+        pass
     print('fit rising edge from to (positive)')
     print('fit constant from to')
     print('constant value (if any)')
@@ -95,6 +97,10 @@ else:
 d,t = getDiodeAndTime(args.inputDir)
 
 plt.title(d.no + ', '+str(t)+' min')
+
+diodestr = args.inputDir[0:4]
+from diodes import diodes
+cideal = diodes[diodestr].Cideal()
 v = getDepletionVoltage(globalpath+args.inputDir+"/"+args.cvfile,
                         min_x=-900,
                         const_cap=const_cap,
@@ -107,6 +113,7 @@ v = getDepletionVoltage(globalpath+args.inputDir+"/"+args.cvfile,
                         strictcheck=args.strictcheck,
                         savedatapath=outprefix+".depl",
                         mode=mode,
+                        cideal = cideal,
                         interactive=not args.batch)
 
 

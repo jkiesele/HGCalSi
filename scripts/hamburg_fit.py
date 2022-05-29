@@ -89,8 +89,8 @@ def make_single_fit(x,y,yerr,globalvars,localvars,plotstr=None,plottitle=None):
     #yerr *= 1.8
     
     fitfunc = DNeff_calc([ (str(k), stdvars[k]) for k in stdvars.keys() ], localvars)
-    fp = fitPoints(x, y, yerr, fitfunc, direct_neighbour_corr=0.5)
-    fplargey = fitPoints(x, y, yerr, fitfunc)
+    fp = fitPoints(x, y, yerr, fitfunc, direct_neighbour_corr=0.)
+    fplargey = fitPoints(x, y, yerr, fitfunc, direct_neighbour_corr=0.)#just for first prel. fit
     fplargey.enlargeYErrs()#for first fit
     
     if plotstr is not None and False:

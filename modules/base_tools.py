@@ -104,7 +104,7 @@ class fitPoints(object):
                     if not is_break:
                         self.covinv[i][j]=direct_neighbour_corr
                  
-        print(self.covinv)   
+        #print(self.covinv)   
         # self.yerr: D
         # self.cov: D x D
         self.covinv = np.expand_dims(self.yerr,axis=0)* self.covinv * np.expand_dims(self.yerr,axis=1)

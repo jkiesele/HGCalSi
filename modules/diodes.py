@@ -194,10 +194,10 @@ class diode(object):
         return eps0*eps * self.area / self.thickness_cm 
         
         
-    def NEff(self, Vdep, Cend=None):
+    def NEff(self, Vdep, Cend=None, return_unc=False):
         
         if Cend is None:
-            Cend = self.const_cap
+            Cend = self.Cideal()
 
         eps0 = 8.85E-14 # F/cm
         eps = 11.9
@@ -205,7 +205,13 @@ class diode(object):
         
         #return Vdep * 2.*eps*eps0 / q0 * 1./(self.thickness_cm)**2
         
-        return (Cend/self.area)**2 * 2*Vdep/(eps*eps0*q0)
+        neff =  (Cend/self.area)**2 * 2*Vdep/(eps*eps0*q0)
+        if not return_unc:
+            return neff
+        
+        neffup = (Cend*1.025/self.area)**2 * 2*Vdep/(eps*eps0*q0)-neff
+        neffdown = neff-(Cend*0.975/self.area)**2 * 2*Vdep/(eps*eps0*q0)
+        return neff, neffup,  neffdown
     
     def VDep(self, Neff, Cend=None):
         

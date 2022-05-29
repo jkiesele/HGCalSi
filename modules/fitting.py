@@ -705,7 +705,8 @@ class DepletionFitter(object):
                  strictcheck=True,
                  interactive=False,
                  addextracuncat=-1000,
-                 extraunc=10.):
+                 extraunc=10.,
+                 cideal= None,):
         
         self.varcut=varcut
         self.strictcheck=strictcheck
@@ -725,6 +726,7 @@ class DepletionFitter(object):
         self.high_end=high_end
         
         self.interactive=interactive
+        self.cideal = cideal
         
         #save info
         self.data.update(
@@ -862,12 +864,17 @@ class DepletionFitter(object):
             #plt.close()
             plt.plot(self.data['x'],self.data['y'],marker='x',linewidth=None,label='data')
             plt.plot(self.data['x_smooth'],self.data['y_smooth'],label='smoothened')
+            if self.cideal is not None:
+                plt.plot( [np.min(self.data['x']),np.max(self.data['x'])], 
+                          [1/self.cideal**2,1/self.cideal**2],label=r'C_{end} (ideal)')
             plt.legend()
             for l in riselines+conslines:
                 plt.plot(self.data['x'],l(self.data['x']),linewidth=0.5)
             plt.xlabel("U [V]")
             plt.ylabel("$1/C^2 [1/F^2]$")
             plt.ylim([np.min(self.data['y'])/1.1, np.max(self.data['y'])*1.2])
+            
+                
             fig = plt.gcf()
             if savedatapath is not None:
                 fig.savefig(savedatapath+'_fig.pdf')

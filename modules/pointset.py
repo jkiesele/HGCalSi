@@ -129,10 +129,18 @@ class pointSet(object):
                 yerrup.append(-up)
             elif mode == "NEff":
                 nom,down,up = p.getDepl()
-                n,u,d = self.diode().NEff(-nom),self.diode().NEff(-down),self.diode().NEff(-up)
+                #print(nom,down,up)
+                n,u,d = self.diode().NEff(-nom),self.diode().NEff(-(nom-down)),self.diode().NEff(-(nom+up))
+                u=u-n
+                d=n-d
+                #neff error
+                _,nu,nd = self.diode().NEff(-nom,return_unc=True)
+                
+                u = np.sqrt( (nu)**2 + (u)**2 )
+                d = np.sqrt( (nd)**2 + (d)**2 )
                 ys.append(n)
-                yerrdown.append(u)
-                yerrup.append(d)
+                yerrdown.append(d)
+                yerrup.append(u)
                 
             elif mode == "I" or mode == "Itot" or mode == "IperFluence"  or mode == "ItimesThickness" or mode == "IperThickness" or mode == "IperVolume":
                 #get closest x point (should be no problem, high res enough
