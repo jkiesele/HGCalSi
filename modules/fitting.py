@@ -579,7 +579,7 @@ class alphaExtractor(object):
         if plot:
             for i,d in enumerate(diodes):
                 plt.errorbar(xs[i],ys[i],yerrs[i],xs[i]*self.rel_fluence_uncertainty,
-                             c=d.fluenceCol(),label=d.label(),marker='o')
+                             c=d.thicknessCol(),label=d.thickness_str(),marker='o')
                 
         m = odr.Model(linear)
         mydata = odr.RealData(xs, ys, sy=yerrs, sx = xs*self.rel_fluence_uncertainty)
@@ -597,7 +597,7 @@ class alphaExtractor(object):
         
         if plot:
             plt.plot([minx,maxx],[linear(out.beta,minx),linear(out.beta,maxx)],
-                 label=r"$\alpha$(fit)="+str(alpha)+"$\pm$"+str(alphaerr)+"$10^{-19}$A/cm")
+                 )#label=r"$\alpha$(fit)="+str(alpha)+"$\pm$"+str(alphaerr)+"$10^{-19}$A/cm")
         
         if alphaerr:
             return alpha,alphaerr
@@ -621,8 +621,8 @@ class alphaExtractor(object):
                 
                 plt.legend(*zip(*unique))
                 
-                plt.xlabel("Fluence [neq/cm$^2$]", fontsize=12)
-                plt.ylabel("I(U$_{dep}$)/Volume [A/cm$^3$] @ -20˚C", fontsize=12)
+                plt.xlabel("Fluence [neq/cm$^2$]")
+                plt.ylabel("I(U$_{dep}$)/Volume [A/cm$^3$] @ -20˚C")
                 plt.tight_layout()
                 plt.savefig(plotstring+'_'+str(t)+'min.pdf')
                 plt.close()
@@ -858,7 +858,7 @@ class DepletionFitter(object):
             
         depl=np.array(depl)
         nom,up,down = depl[0], np.max(depl), np.min(depl)
-        print(nom,up,down)
+        print('[',nom,',',up-nom,',',nom-down,']')
         
         if debugplot:
             #plt.close()

@@ -90,6 +90,7 @@ diodes={}
 #    _pre_ann[k]*=10.
 
 fluence_colours = None
+thickness_colours=None
 
 class diode(object):
     def __init__(self,
@@ -145,6 +146,15 @@ class diode(object):
         
     def fluenceCol(self):
         return fluence_colours[self.rad]
+    
+    def thicknessCol(self):
+        return thickness_colours[self.thickness]
+    
+    def materialMarker(self):
+        if self.material == "EPI":
+            return 'x'
+        else:
+            return 'o'
         
     def radstr(self):
         return str("{:.1e}".format(self.rad))+" neq/cm$^2$"
@@ -304,6 +314,12 @@ def _make_colours():
     raise ValueError("more than 10 auto fluence colors nor implemented")
 
 fluence_colours = _make_colours()
+thickness_colours =  {
+    120: 'tab:gray',
+    200: 'tab:green' ,
+    300: 'tab:orange' 
+    }
+    
 
 def print_all_diodes():
     for k in diodes.keys():
