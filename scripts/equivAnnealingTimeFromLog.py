@@ -24,7 +24,7 @@ def conv(times,temps, unc=""):
     out=[]
     outtemps=[]
     for i in range(len(times)-1):
-        out.append((times[i+1]-times[i])/60.)
+        out.append(1./60.)
         if unc=="":
             outtemps.append(temps[i])
         elif unc=="u":
