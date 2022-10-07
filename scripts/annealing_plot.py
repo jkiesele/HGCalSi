@@ -1,4 +1,4 @@
-#!/usr/bin/python3
+#!/usr/bin/env python3
 
 import os
 import styles
@@ -67,7 +67,7 @@ if addminus30:
 
     
 
-def cosmetics(x, ax, ylabel="-$U_{depl}$ [V]",legtitle=None, **kwargs):
+def cosmetics(x, ax, ylabel="-$U_{depl}$ [V]",legtitle=None, add_more_xaxes=False, **kwargs):
     
     
     plt.legend(title=legtitle, **kwargs)
@@ -75,13 +75,14 @@ def cosmetics(x, ax, ylabel="-$U_{depl}$ [V]",legtitle=None, **kwargs):
     plt.xlabel("time (60˚C) [min]")
     plt.ylabel(ylabel)
     
-    sax = ax.secondary_xaxis('top', functions=(minat60ToDaysAt21, identity))
-    sax.set_xlabel("time (21˚C) [d]")
-    sax = ax.secondary_xaxis(1.2, functions=(minat60ToDaysAt0, identity))
-    sax.set_xlabel("time (0˚C) [d]")
-    if addminus30:
-        sax = ax.secondary_xaxis(1.4, functions=(minat60ToMonthsAtm30, identity))
-        sax.set_xlabel("time (-30˚C) [months]")
+    if add_more_xaxes:
+        sax = ax.secondary_xaxis('top', functions=(minat60ToDaysAt21, identity))
+        sax.set_xlabel("time (21˚C) [d]")
+        sax = ax.secondary_xaxis(1.2, functions=(minat60ToDaysAt0, identity))
+        sax.set_xlabel("time (0˚C) [d]")
+        if addminus30:
+            sax = ax.secondary_xaxis(1.4, functions=(minat60ToMonthsAtm30, identity))
+            sax.set_xlabel("time (-30˚C) [months]")
     
     plt.xscale('log')
     

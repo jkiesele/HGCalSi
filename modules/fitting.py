@@ -777,7 +777,7 @@ class DepletionFitter(object):
         
         
         x = self.data['x_smooth']
-        #y = self.data['y_smooth']
+        y = self.data['y_smooth']
         
         #create smoothed data here
         
@@ -815,7 +815,7 @@ class DepletionFitter(object):
     def _linear(self, x, a, b): 
         return a * x + b
     
-    def _dofit(self, debugplot=False, savedatapath=None):
+    def _dofit(self, debugplot=False, savedatapath=None, plotprefix=None):
         #
         # assume cuts
         # fit lines, store
@@ -837,8 +837,8 @@ class DepletionFitter(object):
                 if self.const_cap is not None and self.const_cap > 0:
                     #print('using constant ',self.const_cap)
                     conslines.append(Linear(a=0., b=self.const_cap/1e22))
-                    conslines.append(Linear(a=0., b=self.const_cap*(1.-0.002*self.varcut)/1e22))
-                    conslines.append(Linear(a=0., b=self.const_cap*(1.+0.002*self.varcut)/1e22))
+                    conslines.append(Linear(a=0., b=self.const_cap*(1.-0.025)/1e22))
+                    conslines.append(Linear(a=0., b=self.const_cap*(1.+0.025)/1e22))
                     continue
                 
                 x = self.data['x_smooth'][scons]
@@ -861,23 +861,27 @@ class DepletionFitter(object):
         print('[',nom,',',up-nom,',',nom-down,']')
         
         if debugplot:
+            import styles
+            allx = np.concatenate([[nom*1.1], self.data['x']], axis=0)
+            #max_x = np.max([nom])
             #plt.close()
-            plt.plot(self.data['x'],self.data['y'],marker='x',linewidth=None,label='data')
-            plt.plot(self.data['x_smooth'],self.data['y_smooth'],label='smoothened')
-            if self.cideal is not None:
-                plt.plot( [np.min(self.data['x']),np.max(self.data['x'])], 
-                          [1/self.cideal**2,1/self.cideal**2],label=r'C_{end} (ideal)')
-            plt.legend()
             for l in riselines+conslines:
-                plt.plot(self.data['x'],l(self.data['x']),linewidth=0.5)
-            plt.xlabel("U [V]")
+                plt.plot(-allx,l(allx),linewidth=0.5)
+            plt.plot(-self.data['x'],self.data['y'],marker='x',linewidth=0,label='data',color='k')
+            #plt.plot(self.data['x_smooth'],self.data['y_smooth'],label='smoothened')
+            #if self.cideal is not None:
+            #    plt.plot( [-np.max(self.data['x']),-np.min(self.data['x'])], 
+            #              [1/self.cideal**2,1/self.cideal**2],label=r'C_{end} (ideal)')
+            #plt.legend()
+            plt.xlabel("-U [V]")
             plt.ylabel("$1/C^2 [1/F^2]$")
             plt.ylim([np.min(self.data['y'])/1.1, np.max(self.data['y'])*1.2])
             
                 
             fig = plt.gcf()
-            if savedatapath is not None:
-                fig.savefig(savedatapath+'_fig.pdf')
+            if plotprefix is not None:
+                fig.savefig(plotprefix+'_fig.pdf')
+                print('saved',plotprefix+'_fig.pdf')
             if self.interactive:
                 plt.show()
             
@@ -888,6 +892,7 @@ class DepletionFitter(object):
                  'depletion_down': down,
                  'riselines': riselines,
                  'conslines': conslines,
+                 'rangevar': self.extraunc
                  }
             d.update(self.data)
             
@@ -942,10 +947,10 @@ class DepletionFitter(object):
         
         return funcs
             
-    def getDepletionVoltage(self,debugplot=False, withunc=False, savedatapath=None):
+    def getDepletionVoltage(self,debugplot=False, withunc=False, savedatapath=None, plotprefix= None):
         if withunc:
-            return self._dofit(debugplot=debugplot,savedatapath=savedatapath)
-        return self._dofit(debugplot=debugplot,savedatapath=savedatapath)[0]
+            return self._dofit(debugplot=debugplot,savedatapath=savedatapath, plotprefix=plotprefix)
+        return self._dofit(debugplot=debugplot,savedatapath=savedatapath,plotprefix=plotprefix)[0]
     
     def _smoothen(self):
         x = self.data['x']

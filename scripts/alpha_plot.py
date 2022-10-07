@@ -90,9 +90,22 @@ for t,a,ae,sstr,color in alldata:
     plt.errorbar(t,a,yerr=ae,marker='o',
                  linestyle=None,linewidth=0,elinewidth=2.,label=sstr,color=color)
     
+    
+    
+#add MM reference 0.016947933384961075 from 20˚C to -20˚C
+plt.errorbar([81], [0.016947933384961075 * 4e-17 * 1e19], 
+             yerr=[0.016947933384961075 * 0.22e-17 * 1e19],
+              linestyle=None,
+              marker='x',
+              linewidth=0.,
+              elinewidth=2.,
+              alpha=0.9,
+              color='k',
+              label= "M'99" )
+    
 plt.legend()
 plt.xlabel('Annealing time @ 60˚C [min]')
-plt.ylabel(r'$\alpha$ [$10^{-19}$ A/cm]')
+plt.ylabel(r'$\alpha$ [$10^{-19}$ A/cm], -20˚C')
 plt.xscale('log')
 plt.tight_layout()
 plt.savefig(outdir+"annealing_alpha.pdf")
@@ -101,6 +114,7 @@ plt.errorbar([10], [7.675], yerr=[0.2], xerr=[0.], marker='x',linewidth=0,elinew
                          label='6" DD (TDR)')
 
 plt.legend()
+plt.tight_layout()
 plt.tight_layout()
 plt.savefig(outdir+"annealing_alpha_TDR.pdf")
 

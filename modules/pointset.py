@@ -35,7 +35,7 @@ class point(object):
             if len(l)<1:
                 raise ValueError("point.init: no directory found with "+checkdir)
             if len(l)>1:
-                raise ValueError("multiple directories found with "+checkdir+':\n'+l)
+                raise ValueError("multiple directories found with "+checkdir+':\n'+str(l))
             l=l[0]
             
         with open(l+'/'+fileprefix+'.depl', 'rb')  as filehandler:
@@ -138,6 +138,7 @@ class pointSet(object):
                 
                 u = np.sqrt( (nu)**2 + (u)**2 )
                 d = np.sqrt( (nd)**2 + (d)**2 )
+                
                 ys.append(n)
                 yerrdown.append(d)
                 yerrup.append(u)
@@ -194,8 +195,14 @@ class pointSet(object):
                 yerrup.append(yup)
             
             xs.append(x)
-            xerrdown.append(float(math.sqrt(p.diode.ann_offset_error**2 + (0.025*x)**2)))
-            xerrup.append(float(math.sqrt(p.diode.ann_offset_error**2 + (0.025*x)**2))) 
+            
+            relxerr = 0.025
+            if (mode=='Udep' or mode == "NEff") and x > 720:
+                print("WARNING: Hard-conded adding 5% uncertainty on time because of time constant conversion")
+                relxerr = np.sqrt(relxerr**2 + 0.05**2)
+            
+            xerrdown.append(float(math.sqrt(p.diode.ann_offset_error**2 + (relxerr*x)**2)))
+            xerrup.append(float(math.sqrt(p.diode.ann_offset_error**2 + (relxerr*x)**2))) 
             
         return np.array(xs),np.array([xerrdown,xerrup]),np.array(ys),np.array([yerrdown,yerrup])
 

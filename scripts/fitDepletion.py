@@ -1,4 +1,4 @@
-#!/usr/bin/python3
+#!/usr/bin/env python3
 
 from argparse import ArgumentParser
 import styles
@@ -43,6 +43,7 @@ os.system('mkdir -p '+outpath+args.inputDir)
 outpath = outpath+args.inputDir+"/"
 outprefix = outpath+args.outfile
 
+
 high_end= None
 high_start= None
 low_end = None
@@ -52,7 +53,7 @@ const_cap=None
 mode = "CVs"
 if args.Cp:
     mode = "CV"
-
+variation = float(args.var)
 if args.rederive or (not args.cvfile==defcvfile) or (not os.path.isfile(outpath+args.outfile+".depl") and not args.ignoremissing):
 
     cv_plotter = curvePlotter(mode=mode,path=globalpath)
@@ -79,6 +80,8 @@ if args.rederive or (not args.cvfile==defcvfile) or (not os.path.isfile(outpath+
     high_start= - float(input())
     low_end = - float(input())
     low_start = - float(input())
+    
+    
 
     const_cap=input()
     if not const_cap == "":
@@ -88,15 +91,28 @@ if args.rederive or (not args.cvfile==defcvfile) or (not os.path.isfile(outpath+
 else:
     d = readDepletionData(outpath,args.outfile+".depl")
     
+    #print(d)
+    
+    
+    
     high_end= d['high_end']
     high_start= d['high_start']
     low_end = d['low_end']
     low_start = d['low_start']
     const_cap=d['const_cap']
+    if 'rangevar' in d.keys():
+        variation=d['rangevar']
+        
+    print('high_end',high_end)
+    print('high_start',high_start)
+    print('low_end',low_end)
+    print('low_start',low_start)
+    print('const_cap',const_cap)
+    print('variation',variation)
     
 d,t = getDiodeAndTime(args.inputDir)
 
-plt.title(d.no + ', '+str(t)+' min')
+plt.title(d.paperlabel() + '\n'+str(t)+' min')
 
 diodestr = args.inputDir[0:4]
 from diodes import diodes
@@ -109,9 +125,10 @@ v = getDepletionVoltage(globalpath+args.inputDir+"/"+args.cvfile,
                         low_end = low_end,
                         high_start = high_start,
                         high_end = high_end,
-                        variation = float(args.var),
+                        variation = variation,
                         strictcheck=args.strictcheck,
                         savedatapath=outprefix+".depl",
+                        plotprefix = outpath+'/'+'cv_fit_'+args.inputDir,
                         mode=mode,
                         cideal = cideal,
                         interactive=not args.batch)
@@ -125,15 +142,15 @@ plt.close()
 ivpl = curvePlotter(mode="IV",path=globalpath)
 ivpl.addPlotFromFile(args.inputDir+"/*.iv",label="I")
 xs,ys = ivpl.getXYSmooth()
-plt.plot(-xs,-ys, label='I (smooth)')
+#plt.plot(-xs,-ys, label='I (smooth)')
 plt.title(d.paperlabel() + ', '+str(t)+' min')
 plt.legend()
 ivpl.savePlot(outprefix+"_iv.pdf",True)
 
 ivgr = curvePlotter(mode="IVGR",path=globalpath)
-ivgr.addPlotFromFile(args.inputDir+"/*.iv",label="I_GR")
+ivgr.addPlotFromFile(args.inputDir+"/*.iv",label="I (guard ring)")
 _,ygr = ivgr.getXYSmooth()
-plt.plot(-xs,-ys, label='I (smooth)')
+#plt.plot(-xs,-ys, label='I (smooth)')
 plt.legend()
 ivpl.savePlot(outprefix+"_ivgr.pdf",True)
 

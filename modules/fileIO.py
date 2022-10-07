@@ -92,6 +92,7 @@ class fileReader(object):
             all=glob.glob(self.path+filename)
             if len(all) == 0:
                 print("file", self.path+filename, " not found")
+            print(all)
             filename = all[-1]
             print(all)
             print('auto select last file:',filename)

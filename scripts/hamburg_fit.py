@@ -22,6 +22,8 @@ datadir=os.getenv("DATAOUTPATH")
 outdir=os.getenv("DATAOUTPATH")+'/hamburg_model/'
 os.system('mkdir -p '+outdir)
 
+print('saving plots to',outdir)
+
 pointsets, _= loadAnnealings()
 
 from iminuit import Minuit
@@ -214,17 +216,20 @@ def makeData():
     
     with open(outdir+'/data.pkl','wb') as f:
         pickle.dump(allres,f)
+    
+    
     print('saved to',outdir+'/data.pkl')
     
    
-makeData()
+#makeData()
 #exit()
 
 #read dump
 
 with open(outdir+'/data.pkl','rb') as f:
     allres=pickle.load(f)
-        
+
+print(allres)        
 varkeys = [k for k in stdvars.keys()] + ['mint']
 #print(allres)
 
@@ -252,7 +257,12 @@ def getYErrs(a,b):
     up = np.max(ab,axis=0,keepdims=True)
     return np.abs(np.concatenate([down,up],axis=0))# 2 x points
 
+
+allp = {}
 for var in varkeys:
+    
+    import styles
+    styles.setstyles()
     
     fig, ax = plt.subplots()
     #ax.set_title(var)
@@ -261,36 +271,54 @@ for var in varkeys:
     
     for sel in ["FZ","EPI"]:
         
+        def _sel(r,s):
+            if s is not None:
+                return r['diode'].material_str()==s
+            return True
+        
         col = 'tab:blue'
         mult=0.98
         if sel == "EPI":
             col = 'tab:orange'
             mult=1.02
     
-        x = mult*np.array([r['diode'].rad  for r in allres if r['diode'].material_str()==sel])
-        y = [r[var] for r in allres if r['diode'].material_str()==sel]
-        yerr = [r[var+'_std'] for r in allres if r['diode'].material_str()==sel]
-        youp = [r[var+'_oup'] for r in allres if r['diode'].material_str()==sel]
-        yodown = [r[var+'_odown'] for r in allres if r['diode'].material_str()==sel]
+        x = [r['diode'].rad  for r in allres if _sel(r,sel)]
+        y = [r[var] for r in allres if _sel(r,sel)]
+        yerr = [r[var+'_std'] for r in allres if _sel(r,sel)]
+        youp = [r[var+'_oup'] for r in allres if _sel(r,sel)]
+        yodown = [r[var+'_odown'] for r in allres if _sel(r,sel)]
     
-        ax.errorbar(x,y,yerr,linewidth=0,marker='o',elinewidth=1,label=sel,capsize=2)
+        
+    
         
         downvar = np.array(y)-np.array(youp)
-        
         upvar = np.array(y)-np.array(yodown)
         updown = getYErrs(upvar,downvar)
         #print(np.array(y))
         #print(updown/np.array(y)*100.)
         
-        yerr = np.sqrt(np.array(yerr)[np.newaxis,...]**2 + (updown)**2)
+        yerrtot = np.sqrt(np.array(yerr)[np.newaxis,...]**2 + (updown)**2)
         
-        yerrnew = np.where(np.abs(yerr)/3.>y,0.,yerr)
-        if not np.all(yerrnew == yerr):
-            print('\n\nWARNING SET SOME ERRORS TO ZERO!!!\n\n')
-            yerr = yerrnew
+        yerrnew = np.where(np.abs(yerrtot)/3.>y,0.,yerr)
+        #if not np.all(yerrnew == yerrtot):
+            #print('\n\nWARNING SET SOME ERRORS TO ZERO!!!\n\n')
+            #yerrtot = yerrnew
+            
+        if not sel in allp.keys():
+            allp[sel]={}
+        #now got all inputs, save them for Ron
+        allp[sel].update({'fluence': x,
+                      var: y,
+                      var+'_err': yerrtot.tolist()})
+            
+                     
+        x = np.array(x) * mult #just for plot
         
-        ax.errorbar(x,y,yerr,linewidth=0,marker='o',elinewidth=1,label=None,capsize=0,
+        ax.errorbar(x,y,yerr,linewidth=0,marker='o',elinewidth=1,label=sel,capsize=2)
+        ax.errorbar(x,y,yerrtot,linewidth=0,marker='o',elinewidth=1,label=None,capsize=0,
                     color = col)
+        
+        
         
         
         #for xi,yi, txt in zip(x,y,[r['diode'] for r in allres]):
@@ -309,8 +337,10 @@ for var in varkeys:
     print('saved',outdir+'/'+var+'.pdf')
     plt.close()
 
-
-
+#save for Ron
+ofilename = outdir+'/allpoints.txt'
+with open(ofilename,'w') as f:
+    f.write(str(allp))
 
 
 

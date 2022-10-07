@@ -63,6 +63,7 @@ def getDepletionVoltage(filename, debug=True,
                         high_start=None,
                         high_end =None,
                         savedatapath=None,
+                        plotprefix = None,
                         variation=10,
                         strictcheck=True,
                         interactive=False,
@@ -84,7 +85,7 @@ def getDepletionVoltage(filename, debug=True,
                         cideal=cideal,
                         strictcheck=strictcheck,
                         interactive=interactive)
-    v = df.getDepletionVoltage(debugplot=debug,savedatapath=savedatapath)
+    v = df.getDepletionVoltage(debugplot=debug,savedatapath=savedatapath, plotprefix=plotprefix)
     print('freq',freq)
     return v
 
