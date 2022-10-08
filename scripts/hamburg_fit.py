@@ -55,7 +55,7 @@ allEPI = ["3008_UL"] +["3007_UL"]+["3003_UL"]
             
 
 
-samples = [allFZ]
+#samples = [allFZ]
 
 yscaling = 1.
 
