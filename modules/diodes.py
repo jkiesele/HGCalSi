@@ -18,7 +18,8 @@ _rad_times={
     1e15: 10.8,
     1.5e15: 16.2,
     2.5e15: 27.5,
-    1e16: 108
+    1e16: 108,
+    0: 0.,
     }
 
 _rad_temp_low=45
@@ -28,7 +29,8 @@ _rad_temp_hi=55
 
 
 def radiation_annealing_Ljubljana(radtime, plot=False, maxtemp=45):
-    
+    if radtime == 0:
+        return 0
     import alpha_calc #this cpython lib import might not work on all machine sin the same way
 
 #now calculate average annealing time assuming linearly increasing radiation damage per second (because why not)
@@ -134,13 +136,13 @@ class diode(object):
         self.const_cap=0
         if self.no[0] == "1":
             self.const_cap = math.sqrt(1/1.2e22)
-            self.udep_norad = 264
+            self.udep_norad = 263
         elif self.no[0] == "2":
             self.const_cap = math.sqrt(1/5.5e21)
-            self.udep_norad = 126
+            self.udep_norad = 120.1
         elif self.no[0] == "3":
             self.const_cap = math.sqrt(1/1.92e21)
-            self.udep_norad = 44
+            self.udep_norad = 41.8
         elif self.no[0] == "6":
             self.const_cap = None #unknown
         
@@ -210,7 +212,7 @@ class diode(object):
             Cend = self.Cideal()
 
         eps0 = 8.85E-14 # F/cm
-        eps = 11.9
+        eps = 11.68 #11.9
         q0 = 1.60E-19 # Coulomb
         
         #return Vdep * 2.*eps*eps0 / q0 * 1./(self.thickness_cm)**2
@@ -244,7 +246,7 @@ class diode(object):
         
         return 2./(self.area**2 * eps * eps0 *q0) * 1/slope
 
-
+##
 
 D1002=diode(6.5e14,1002,300,"FZ")
 diodes['1002']=D1002
@@ -290,6 +292,18 @@ D6002.ann_offset_error = 3
 D6002.area=0.2595 #check this
 diodes['6002']=D6002
 
+
+#unirradiated
+D1013=diode(0.,1013,300,"FZ")
+diodes['1013']=D1013
+
+D2012=diode(0.,2012,200,"FZ")
+diodes['2012']=D2012
+
+D3103=diode(0.,3103,120,"EPI")
+diodes['3103']=D3103
+
+
 #create fluence colours
 
 def _make_colours():
@@ -305,8 +319,9 @@ def _make_colours():
         'tab:pink'   ,
         'tab:gray'   ,
         'tab:olive'  ,
-        'tab:cyan']
-    if len(fluences) <= 10: #use tableau
+        'tab:cyan',
+        'k']
+    if len(fluences) <= len(tab_colours): #use tableau
         cols = {}
         for i in range(len(fluences)):
             cols[fluences[i]]=tab_colours[i]

@@ -22,21 +22,24 @@ dataAll = pointsets.getInterpolatedXYsDiodes("IperVolume",
                                           ["2002_UL","2003_UL","2102_UL","2002_UR","2003_UR","2102_UR"]+
                                           ["1002_UL","1003_UL","1102_UL","1002_UR","1003_UR","1102_UR"], 
                                           current_at='Udep',
-                                          debugplots = {'outfile' : outdir+'EPI_FZ_interpol','xlabel': 'Annealing time [min]', 'ylabel': 'I(U$_{dep}$) [A]'}
+                                          debugplots = {'outfile' : outdir+'EPI_FZ_interpol','xlabel': 'Annealing time [min]', 
+                                                        'ylabel': 'I(U$_{dep}$)/Volume [mA/cm$^{-3}$]', 'y_scaler': 1e3}
                                           )
 
 dataFZ = pointsets.getInterpolatedXYsDiodes("IperVolume", 
                                           ["2002_UL","2003_UL","2102_UL","2002_UR","2003_UR","2102_UR"]+
                                           ["1002_UL","1003_UL","1102_UL","1002_UR","1003_UR","1102_UR"], 
                                           current_at='Udep',
-                                          debugplots = {'outfile' : outdir+'FZ_interpol', 'xlabel': 'Annealing time [min]','ylabel': 'I(U$_{dep}$) [A]'}
+                                          debugplots = {'outfile' : outdir+'FZ_interpol', 'xlabel': 'Annealing time [min]', 
+                                                        'ylabel': 'I(U$_{dep}$)/Volume [mA/cm$^{-3}$]', 'y_scaler': 1e3}
                                           )
 
 
 dataEPI = pointsets.getInterpolatedXYsDiodes("IperVolume", 
                                           ["3003_UL","3007_UL","3008_UL"],
                                           current_at='Udep',
-                                          debugplots = {'outfile' : outdir+'EPI_interpol', 'xlabel': 'Annealing time [min]','ylabel': 'I(U$_{dep}$) [A]'}
+                                          debugplots = {'outfile' : outdir+'EPI_interpol', 'xlabel': 'Annealing time [min]', 
+                                                        'ylabel': 'I(U$_{dep}$)/Volume [mA/cm$^{-3}$]', 'y_scaler': 1e3}
                                           )
 
 
@@ -59,10 +62,10 @@ for t,a,ae,sstr,color in alldata:
     
     plt.close()
     plt.errorbar(t,a,yerr=np.sqrt((0.1*a)**2+ ae**2), #add the 10% fluence uncertainty in quadrature a posteriori
-                 linestyle=None,linewidth=0,elinewidth=2.,label=None,alpha=0.2,color=color)
+                 linestyle=None,linewidth=0,elinewidth=1.,label=None,alpha=1.,color=color)
     
     plt.errorbar(t,a,yerr=ae,marker='o',
-                 linestyle=None,linewidth=0,elinewidth=2.,label=sstr,color=color)
+                 linestyle=None,linewidth=0,elinewidth=3.,label=sstr,color=color)
     
     if False:#estebans point
         plt.errorbar([10], [7.675], yerr=[0.2], xerr=[0.], marker='x',linewidth=0,elinewidth=2.,
@@ -85,10 +88,10 @@ import styles
 
 for t,a,ae,sstr,color in alldata:
     plt.errorbar(t,a,yerr=np.sqrt((0.1*a)**2+ ae**2) ,
-                 linestyle=None,linewidth=0,elinewidth=2.,label=None,alpha=0.2,color=color)
+                 linestyle=None,linewidth=0,elinewidth=1.,label=None,alpha=1.,color=color)
     
     plt.errorbar(t,a,yerr=ae,marker='o',
-                 linestyle=None,linewidth=0,elinewidth=2.,label=sstr,color=color)
+                 linestyle=None,linewidth=0,elinewidth=3.,label=sstr,color=color)
     
     
     

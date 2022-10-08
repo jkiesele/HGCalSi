@@ -1,7 +1,12 @@
 
+use_hep_style = False
+if use_hep_style:
+    import mplhep as hep
+    hep.style.use(hep.style.ROOT)
+
 import matplotlib
 import matplotlib.pyplot as plt
-import math
+
 
 g_fontsize=14
 def setstyles(fontsize=14):
@@ -15,6 +20,8 @@ def setstyles(fontsize=14):
     matplotlib.rc('legend',fontsize=fontsize)
     matplotlib.rc('xtick',labelsize=fontsize)
     matplotlib.rc('ytick',labelsize=fontsize)
+    if use_hep_style:
+        hep.style.use(hep.style.ROOT)
 
 def fontsize():
     return g_fontsize

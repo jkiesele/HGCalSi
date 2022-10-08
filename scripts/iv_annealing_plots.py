@@ -1,4 +1,4 @@
-#!/usr/bin/python3
+#!/usr/bin/env python3
 
 import os
 import matplotlib.pyplot as plt
@@ -66,9 +66,15 @@ def setAxisIV(ax,ylabel="-$I$ [A]",**legkwargs):
 
 pointsets, kneepointset= loadAnnealings()
 
-itimesthicknessylim=[0,0.009]
+scale_y = 1e6
+
+itimesthicknessylim=[0,scale_y*0.009]
+
 
 for U in (-600, -800, "Udep"):
+    
+    import styles
+    styles.setstyles()
     
     voltstring = str(U)
     if not hasattr(U, "split"):
@@ -81,10 +87,11 @@ for U in (-600, -800, "Udep"):
                         #colors=['tab:blue','tab:green','tab:orange'],
                     colors='fluence',
                     labelmode='fluence',
+                    scale_y=scale_y,
                         current_at=U)
-    setAxisIV(ax,"I("+voltstring+")[A]")
-    plt.ylim([0,6e-5])
-    plt.text(.3, 5.5e-5, "120 µm EPI",fontdict=styles.fontdict())
+    setAxisIV(ax,"Leakage current ("+voltstring+") [µA]")
+    plt.ylim([0,scale_y*6e-5])
+    plt.text(.3, scale_y*5.5e-5, "120 µm EPI",fontdict=styles.fontdict())
     plt.tight_layout()
     plt.savefig(outdir+'120_'+str(U)+'.pdf')
     
@@ -92,9 +99,10 @@ for U in (-600, -800, "Udep"):
     xs = pointsets.addToPlot("IperFluence", ["3003_UL","3007_UL","3008_UL"],
                         #colors=['tab:blue','tab:green','tab:orange'],
                     colors='fluence',
+                    scale_y=scale_y,
                         current_at=U)
-    setAxisIV(ax, "I("+voltstring+")[A] / Fluence [neq/cm$^2$]")
-    plt.ylim([0,0.8e-20])
+    setAxisIV(ax, "I("+voltstring+")[µA] / Fluence [neq/cm$^2$]")
+    plt.ylim([0,scale_y*0.8e-20])
     plt.tight_layout()
     plt.savefig(outdir+'120_IperFluence_'+str(U)+'.pdf')
     
@@ -103,17 +111,19 @@ for U in (-600, -800, "Udep"):
     xs = pointsets.addToPlot("IperThickness", ["3003_UL","3007_UL","3008_UL"],
                         #colors=['tab:blue','tab:green','tab:orange'],
                     colors='fluence',
+                    scale_y=scale_y,
                         current_at=U)
-    setAxisIV(ax, "I("+voltstring+")[A] / thickness [µm]")
-    plt.ylim([0,6e-5/120.])
+    setAxisIV(ax, "I("+voltstring+")[µA] / thickness [µm]")
+    plt.ylim([0,scale_y*6e-5/120.])
     plt.savefig(outdir+'120_IperThickness_'+str(U)+'.pdf')
     
     ax = newplot()
     xs = pointsets.addToPlot("ItimesThickness", ["3003_UL","3007_UL","3008_UL"],
                         #colors=['tab:blue','tab:green','tab:orange'],
                     colors='fluence',
+                    scale_y=scale_y,
                         current_at=U)
-    setAxisIV(ax, "I("+voltstring+")[A] * thickness [µm]")
+    setAxisIV(ax, "I("+voltstring+")[µA] * thickness [µm]")
     plt.ylim(itimesthicknessylim)
     plt.tight_layout()
     plt.savefig(outdir+'120_ItimesThickness_'+str(U)+'.pdf')
@@ -124,18 +134,20 @@ for U in (-600, -800, "Udep"):
     pointsets.addToPlot("I", ["2002_UL","2003_UL","2102_UL"],[" UL"," UL"," UL"],
                         #colors=['tab:blue','tab:green','tab:orange'],
                     colors='fluence',
+                    scale_y=scale_y,
                     labelmode='fluence',
                         current_at=U)
     xs = pointsets.addToPlot("I", ["2002_UR","2003_UR","2102_UR"],[" UR"," UR"," UR"],
                         #colors=['tab:blue','tab:green','tab:orange'],
                     colors='fluence',
+                    scale_y=scale_y,
                         marker='x',
                     labelmode='fluence',
                         current_at=U)
     
-    setAxisIV(ax,"I("+voltstring+")[A]")
-    plt.ylim([0,3.5e-5])
-    plt.text(.3, 0.2e-5, "200 µm FZ",fontdict=styles.fontdict())
+    setAxisIV(ax,"Leakage current ("+voltstring+") [µA]")
+    plt.ylim([0,scale_y*3.5e-5])
+    plt.text(.3, scale_y*0.2e-5, "200 µm FZ",fontdict=styles.fontdict())
     plt.tight_layout()
     plt.savefig(outdir+'200_'+str(U)+'.pdf')
     
@@ -144,16 +156,18 @@ for U in (-600, -800, "Udep"):
     pointsets.addToPlot("IperFluence", ["2002_UL","2003_UL","2102_UL"],[" UL"," UL"," UL"],
                         #colors=['tab:blue','tab:green','tab:orange'],
                     colors='fluence',
+                    scale_y=scale_y,
                         current_at=U)
     
     xs = pointsets.addToPlot("IperFluence", ["2002_UR","2003_UR","2102_UR"],[" UR"," UR"," UR"],
                         #colors=['tab:blue','tab:green','tab:orange'],
                     colors='fluence',
+                    scale_y=scale_y,
                         marker='x',
                         current_at=U)
     
-    setAxisIV(ax, "I("+voltstring+")[A] / Fluence [neq/cm$^2$]")
-    plt.ylim([0,0.75e-20])
+    setAxisIV(ax, "I("+voltstring+")[µA] / Fluence [neq/cm$^2$]")
+    plt.ylim([0,scale_y*0.75e-20])
     plt.tight_layout()
     plt.savefig(outdir+'200_IperFluence_'+str(U)+'.pdf')
     
@@ -162,16 +176,18 @@ for U in (-600, -800, "Udep"):
     pointsets.addToPlot("IperThickness", ["2002_UL","2003_UL","2102_UL"],
                         #colors=['tab:blue','tab:green','tab:orange'],
                     colors='fluence',
+                    scale_y=scale_y,
                         current_at=U)
     
     xs = pointsets.addToPlot("IperThickness", ["2002_UR","2003_UR","2102_UR"],[" UR"," UR"," UR"],
                         #colors=['tab:blue','tab:green','tab:orange'],
                     colors='fluence',
+                    scale_y=scale_y,
                         marker='x',
                         current_at=U)
     
-    setAxisIV(ax, "I("+voltstring+")[A] / thickness [µm]")
-    plt.ylim([0,3.5e-5/200.])
+    setAxisIV(ax, "I("+voltstring+")[µA] / thickness [µm]")
+    plt.ylim([0,scale_y*3.5e-5/200.])
     plt.tight_layout()
     plt.savefig(outdir+'200_IperThickness_'+str(U)+'.pdf')
     
@@ -180,15 +196,17 @@ for U in (-600, -800, "Udep"):
     pointsets.addToPlot("ItimesThickness", ["2002_UL","2003_UL","2102_UL"],
                         #colors=['tab:blue','tab:green','tab:orange'],
                     colors='fluence',
+                    scale_y=scale_y,
                         current_at=U)
     
     xs = pointsets.addToPlot("ItimesThickness", ["2002_UR","2003_UR","2102_UR"],[" UR"," UR"," UR"],
                         #colors=['tab:blue','tab:green','tab:orange'],
                     colors='fluence',
+                    scale_y=scale_y,
                         marker='x',
                         current_at=U)
     
-    setAxisIV(ax, "I("+voltstring+")[A] * thickness [µm]")
+    setAxisIV(ax, "I("+voltstring+")[µA] * thickness [µm]")
     plt.ylim(itimesthicknessylim)
     plt.tight_layout()
     plt.savefig(outdir+'200_ItimesThickness_'+str(U)+'.pdf')
@@ -201,17 +219,19 @@ for U in (-600, -800, "Udep"):
     pointsets.addToPlot("I", ["1002_UL","1003_UL","1102_UL"],[" UL"," UL"," UL"],
                         #colors=['tab:blue','tab:green','tab:orange'],
                     colors='fluence',
+                    scale_y=scale_y,
                     labelmode='fluence',
                         current_at=U)
     xs = pointsets.addToPlot("I", ["1002_UR","1003_UR","1102_UR"],[" UR"," UR"," UR"],
                         #colors=['tab:blue','tab:green','tab:orange'],
                     colors='fluence',
+                    scale_y=scale_y,
                     marker='x',
                     labelmode='fluence',
                         current_at=U)
-    setAxisIV(ax,"I("+voltstring+")[A]")
-    plt.ylim([0,2.1e-5])
-    plt.text(.3, 0.1e-5, "300 µm FZ",fontdict=styles.fontdict())
+    setAxisIV(ax,"Leakage current ("+voltstring+") [µA]")
+    plt.ylim([0,scale_y*2.1e-5])
+    plt.text(.3, scale_y*0.1e-5, "300 µm FZ",fontdict=styles.fontdict())
     plt.tight_layout()
     plt.savefig(outdir+'300_'+str(U)+'.pdf')
     
@@ -220,15 +240,17 @@ for U in (-600, -800, "Udep"):
     pointsets.addToPlot("IperFluence", ["1002_UL","1003_UL","1102_UL"],
                         #colors=['tab:blue','tab:green','tab:orange'],
                     colors='fluence',
+                    scale_y=scale_y,
                         current_at=U)
     xs = pointsets.addToPlot("IperFluence", ["1002_UR","1003_UR","1102_UR"],[" UR"," UR"," UR"],
                         #colors=['tab:blue','tab:green','tab:orange'],
                     colors='fluence',
+                    scale_y=scale_y,
                     marker='x',
                         current_at=U)
     
-    setAxisIV(ax, "I("+voltstring+")[A] / Fluence [neq/cm$^2$]")
-    plt.ylim([0,1e-20])
+    setAxisIV(ax, "I("+voltstring+")[µA] / Fluence [neq/cm$^2$]")
+    plt.ylim([0,scale_y*1e-20])
     plt.tight_layout()
     plt.savefig(outdir+'300_IperFluence_'+str(U)+'.pdf')
     
@@ -236,15 +258,17 @@ for U in (-600, -800, "Udep"):
     pointsets.addToPlot("IperThickness", ["1002_UL","1003_UL","1102_UL"],
                         #colors=['tab:blue','tab:green','tab:orange'],
                     colors='fluence',
+                    scale_y=scale_y,
                         current_at=U)
     xs = pointsets.addToPlot("IperThickness", ["1002_UR","1003_UR","1102_UR"],[" UR"," UR"," UR"],
                         #colors=['tab:blue','tab:green','tab:orange'],
                     colors='fluence',
+                    scale_y=scale_y,
                     marker='x',
                         current_at=U)
     
-    setAxisIV(ax, "I("+voltstring+")[A] / thickness [µm]")
-    plt.ylim([0,2.1e-5/300])
+    setAxisIV(ax, "I("+voltstring+")[µA] / thickness [µm]")
+    plt.ylim([0,scale_y*2.1e-5/300])
     plt.tight_layout()
     plt.savefig(outdir+'300_IperThickness_'+str(U)+'.pdf')
     
@@ -252,14 +276,16 @@ for U in (-600, -800, "Udep"):
     pointsets.addToPlot("ItimesThickness", ["1002_UL","1003_UL","1102_UL"],
                         #colors=['tab:blue','tab:green','tab:orange'],
                     colors='fluence',
+                    scale_y=scale_y,
                         current_at=U)
     xs = pointsets.addToPlot("ItimesThickness", ["1002_UR","1003_UR","1102_UR"],[" UR"," UR"," UR"],
                         #colors=['tab:blue','tab:green','tab:orange'],
                     colors='fluence',
+                    scale_y=scale_y,
                     marker='x',
                         current_at=U)
     
-    setAxisIV(ax, "I("+voltstring+")[A] * thickness [µm]")
+    setAxisIV(ax, "I("+voltstring+")[µA] * thickness [µm]")
     plt.ylim(itimesthicknessylim)
     plt.tight_layout()
     plt.savefig(outdir+'300_ItimesThickness_'+str(U)+'.pdf')

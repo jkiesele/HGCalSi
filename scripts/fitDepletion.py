@@ -136,6 +136,13 @@ v = getDepletionVoltage(globalpath+args.inputDir+"/"+args.cvfile,
 
 if not defcvfile == args.cvfile:
     exit()
+
+d2 = readDepletionData(outpath,args.outfile+".depl")
+neff = diodes[diodestr].NEff(-d2['depletion_nominal'])
+print('NEff ', neff, 
+      'rel: ', diodes[diodestr].NEff(-d2['depletion_down'])/neff * 100. -100., 
+      '', diodes[diodestr].NEff(-d2['depletion_up'])/neff* 100. -100., 
+      '% , depl voltage',-v)
     
 #smoothen IV curves and save as dicts for easy processing
 plt.close()

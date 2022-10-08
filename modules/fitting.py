@@ -561,12 +561,12 @@ class alphaExtractor(object):
                 currenterrup.append(errs[1])
         
         xs = np.array(fluences)
-        ys = np.array(currents) * 1e-2/1e-6 #from µm to cm
-        yerrs = np.max(np.array([currenterrdown,currenterrup]),axis=0)* 1e-2/1e-6 
+        ys = np.array(currents)
+        yerrs = np.max(np.array([currenterrdown,currenterrup]),axis=0)
         
         return xs,ys,yerrs,diodes
     
-    def extractAlphaForTime(self, t_in_min : float, plot=False):
+    def extractAlphaForTime(self, t_in_min : float, plot=False, y_scaler = 1.):
         
         def linear(a,x):
             return a*1e-19*x
@@ -578,7 +578,7 @@ class alphaExtractor(object):
         
         if plot:
             for i,d in enumerate(diodes):
-                plt.errorbar(xs[i],ys[i],yerrs[i],xs[i]*self.rel_fluence_uncertainty,
+                plt.errorbar(xs[i],y_scaler*ys[i],yerr=y_scaler*yerrs[i], xerr=xs[i]*self.rel_fluence_uncertainty,
                              c=d.thicknessCol(),label=d.thickness_str(),marker='o')
                 
         m = odr.Model(linear)
@@ -596,9 +596,16 @@ class alphaExtractor(object):
         #alphaerr = math.sqrt(alphaerr**2 + (alpha*self.rel_fluence_uncertainty)**2)
         
         if plot:
-            plt.plot([minx,maxx],[linear(out.beta,minx),linear(out.beta,maxx)],
-                 )#label=r"$\alpha$(fit)="+str(alpha)+"$\pm$"+str(alphaerr)+"$10^{-19}$A/cm")
-        
+            import styles
+            miny = y_scaler*linear(out.beta,minx)
+            maxy = y_scaler*linear(out.beta,maxx)
+            plt.plot([minx,maxx],[miny,maxy])
+            plt.text(
+                 ((maxx-minx)*0.4  +minx),
+                 ((maxy-miny)*0.1  +miny), 
+                 r"$\alpha$=("+str(alpha)+"$\pm$"+str(alphaerr)[:4]+")$\cdot 10^{-19}$A/cm",
+                 fontdict = styles.fontdict())
+            
         if alphaerr:
             return alpha,alphaerr
         else:
@@ -613,7 +620,7 @@ class alphaExtractor(object):
         alphas, alphaserrs, validtimes =[],[],[]
         for i,t in enumerate(time_array_minutes):
             plt.close()
-            a,aerr = self.extractAlphaForTime(t,plot=doplot)
+            a,aerr = self.extractAlphaForTime(t,plot=doplot, y_scaler=1e3)
             if doplot and a is not None:
                 
                 handles, labels = plt.gca().get_legend_handles_labels()
@@ -622,7 +629,7 @@ class alphaExtractor(object):
                 plt.legend(*zip(*unique))
                 
                 plt.xlabel("Fluence [neq/cm$^2$]")
-                plt.ylabel("I(U$_{dep}$)/Volume [A/cm$^3$] @ -20˚C")
+                plt.ylabel("I(U$_{dep}$)/Volume [mA/cm$^3$] @ -20˚C")
                 plt.tight_layout()
                 plt.savefig(plotstring+'_'+str(t)+'min.pdf')
                 plt.close()

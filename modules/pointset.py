@@ -179,17 +179,17 @@ class pointSet(object):
                     yup /= p.diode.rad
                     ydown /= p.diode.rad
                 if mode == "ItimesThickness":
-                    y *= p.diode.thickness
-                    yup *= p.diode.thickness
-                    ydown *= p.diode.thickness
+                    y *= p.diode.thickness_cm
+                    yup *= p.diode.thickness_cm
+                    ydown *= p.diode.thickness_cm
                 if mode == "IperThickness":
-                    y /= p.diode.thickness
-                    yup /= p.diode.thickness
-                    ydown /= p.diode.thickness
+                    y /= p.diode.thickness_cm
+                    yup /= p.diode.thickness_cm
+                    ydown /= p.diode.thickness_cm
                 if mode == "IperVolume":
-                    y /= p.diode.thickness*p.diode.area
-                    yup /= p.diode.thickness*p.diode.area
-                    ydown /= p.diode.thickness*p.diode.area
+                    y /= p.diode.thickness_cm*p.diode.area
+                    yup /= p.diode.thickness_cm*p.diode.area
+                    ydown /= p.diode.thickness_cm*p.diode.area
                 ys.append(y)
                 yerrdown.append(ydown)
                 yerrup.append(yup)
@@ -411,13 +411,17 @@ class pointSetsContainer(object):
             if debugplots is not None:
                 x,xerr,y,yerr = ps.getXYs(mode,current_at)
                 
+                y_scaler = 1.
+                if 'y_scaler' in debugplots.keys():
+                    y_scaler = debugplots['y_scaler']
+                
                 ixs,iys,iyerrs = ips.interpolateArray(np.arange(np.min(x),np.max(x)))
                 
                 plt.close()
-                plt.errorbar(ixs,iys,yerr=iyerrs,label='interpolated',
+                plt.errorbar(ixs,iys*y_scaler,yerr=iyerrs*y_scaler,label='interpolated',
                              linewidth=2,elinewidth=2.,ecolor='tab:gray',color='tab:red')
                 
-                plt.errorbar(x,y,yerr=yerr,xerr=xerr,label='measured points',
+                plt.errorbar(x,y*y_scaler,yerr=yerr*y_scaler,xerr=xerr,label='measured points',
                              linewidth=0,elinewidth=2.,marker='o',color='tab:orange')
                 
                 plt.xlabel(debugplots['xlabel'])
@@ -438,7 +442,7 @@ class pointSetsContainer(object):
         
     def addToPlot(self,mode, whichsets,add=[],marker='o',colors=None,linestyle='',
                   linewidth=None,current_at=None, add_rel_y_unc=None,labels=None,
-                  labelmode=''):
+                  labelmode='', scale_y=1):
         while len(add) < len(whichsets):
             add.append("")
         if colors is not None and colors == 'fluence':
@@ -459,6 +463,10 @@ class pointSetsContainer(object):
                 yerr = np.sign(yerr)*np.sqrt( yerr**2 + (np.expand_dims(y,axis=0)*add_rel_y_unc)**2 )
             if l is None:
                 l = ps.diode().paperlabel(labelmode)+addstr
+            y = np.array(y)
+            yerr = np.array(yerr)
+            y *= scale_y
+            yerr *= scale_y
             plt.errorbar(x, y,  yerr=yerr, xerr=xerr,label=l,
                          linewidth=linewidth,marker=marker,linestyle=linestyle,
                          color=c)

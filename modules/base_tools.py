@@ -76,11 +76,11 @@ class DNeff_calc(object):
     def eval(self,x, varl):
         return self.NC(x,varl)+self.NA(x,varl)+self.NY(x,varl)
     
-    def plot(self,x,varl):
-        plt.plot(x,self.NC(x,varl),label=r'$N_C$')
-        plt.plot(x,self.NA(x,varl),label=r'$N_A$')
-        plt.plot(x,self.NY(x,varl),label=r'$N_Y$')
-        plt.plot(x,self.eval(x,varl),label=r'$\Delta N_{eff}$')
+    def plot(self,x,varl,label=None):
+        #plt.plot(x,self.NC(x,varl),label=r'$N_C$')
+        #plt.plot(x,self.NA(x,varl),label=r'$N_A$')
+        #plt.plot(x,self.NY(x,varl),label=r'$N_Y$')
+        plt.plot(x,self.eval(x,varl),label=label)
     
 class fitPoints(object):
     
@@ -122,12 +122,12 @@ class fitPoints(object):
         chi2 = jnp.expand_dims(delta,axis=0) * self.covinv * jnp.expand_dims(delta,axis=1)
         return jnp.sum(chi2)
     
-    def plot(self,varl=None):
+    def plot(self,varl=None, label=None):
         #np.logspace()
         xs = np.logspace(np.log(np.min(self.x)),np.log(np.max(self.x)),base=np.exp(1),num=200)
         if varl is not None:
-            self.functclass.plot(xs,varl)
-        plt.errorbar(self.x,self.y,self.yerr,self.xerr,linewidth=0,marker='o',elinewidth=1,label='data')
+            self.functclass.plot(xs,varl, label= label)
+        #plt.errorbar(self.x,self.y,self.yerr,self.xerr,linewidth=0,marker='o',elinewidth=1,label='data',color='k')
         
 
 class VarSet(object):

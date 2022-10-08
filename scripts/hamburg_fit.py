@@ -54,7 +54,8 @@ allFZ = ["2002_UL","2002_UR","1003_UL","1003_UR"]+\
 allEPI = ["3008_UL"] +["3007_UL"]+["3003_UL"]
             
 
-#samples = [allFZ]
+
+samples = [allFZ]
 
 yscaling = 1.
 
@@ -80,7 +81,7 @@ def mergePoints(pset):
     return [ref]
 
 
-def make_single_fit(x,y,yerr,globalvars,localvars,plotstr=None,plottitle=None):
+def make_single_fit(x,y,yerr,globalvars,localvars,plotstr=None,plottitle=None, indiv_data=None):
     
     x = np.array(x)
     y = np.array(y)
@@ -112,6 +113,12 @@ def make_single_fit(x,y,yerr,globalvars,localvars,plotstr=None,plottitle=None):
     m.strategy=2
     o = m.migrad(iterate=10)
     o = m.minos()
+    
+    min_chi2 = m.fval
+    npar = m.nfit
+    ndof = len(x)-npar
+    
+    
 
     cov = np.array(m.covariance)
     merrs = np.array(m.errors)
@@ -123,6 +130,13 @@ def make_single_fit(x,y,yerr,globalvars,localvars,plotstr=None,plottitle=None):
     fvals=np.array(m.values)
     
     resdict = fitfunc.list_to_dict(m.values)  ##vvs.getVarList(True)
+    
+    resdict['min_chi2'] = min_chi2
+    resdict['npar'] = npar
+    resdict['ndof'] = ndof
+    
+    #print('chi2/ndof',min_chi2/ndof)
+    
     errdict = fitfunc.list_to_dict(m.errors)
     for k in errdict.keys():
         resdict[k+'_std']=errdict[k]
@@ -151,12 +165,26 @@ def make_single_fit(x,y,yerr,globalvars,localvars,plotstr=None,plottitle=None):
     resdict['mint_std']=np.sqrt(np.sum( mint_std[np.newaxis,...]*corr*mint_std[...,np.newaxis] ))
     
     if plotstr is not None:
-        fp.plot(fvals)
+        import styles
+        styles.setstyles(14)
+        fp.plot(fvals, r'fit, $\chi^2/ndof=$'+str(min_chi2/ndof)[:3])
+        
+        #add data
+        for di in indiv_data:
+            plt.errorbar(di['t'],di['y'],di['yerr'][:,0],di['terr'],linewidth=0,
+                         marker='o',elinewidth=1,label=di['diode'].paperlabel())
+        
         plt.xscale('log')
+        plt.xlim(left=0.5)
+        plt.ylabel(r'N$_{eff}$ [1/cm$^{3}$]')
+        plt.xlabel('time (60˚C) [min]')
+        
         plt.legend()
         plt.title(plottitle)
+        plt.tight_layout()
         plt.savefig(plotstr+'.pdf')
         plt.close()
+        styles.setstyles()
     
     return resdict, [fp, fvals]
 
@@ -174,6 +202,7 @@ def makeData():
         
         
         dataFZ = pointsets.getXYsDiodes("NEff", s)
+        orig_dataFZ = pointsets.getXYsDiodes("NEff", s)
         NC0s=[]
         for d in dataFZ:
             print(str(d['diode']))
@@ -190,14 +219,21 @@ def makeData():
             
         print('data shapes',d['t'].shape, d['y'].shape, yerr.shape)
         
+        outfilename = d['diode'].material+'_'+d['diode'].radstr()[:-10]#cut off units
+        outfilename = 'fit_'+outfilename.strip()
+        
         localvars = {'phi': d['diode'].rad,'NC0' : d['diode'].NEff_norad() }
         resdict, v = make_single_fit(d['t'],d['y'],yerr,globalvars,localvars,
-                                     plotstr=outdir+'/'+str(ip),plottitle = d['diode'].radstr())
+                                     plotstr=outdir+'/'+outfilename,
+                                     plottitle = d['diode'].material +', ' +d['diode'].radstr() ,
+                                     indiv_data = orig_dataFZ)
         
         roup, _ = make_single_fit(d['t_oup'],d['y'],yerr,globalvars,localvars,
-                                  plotstr=outdir+'/'+str(ip)+'_tup',plottitle = d['diode'].radstr())
+                                  plotstr=outdir+'/'+str(ip)+'_tup',plottitle = '',
+                                     indiv_data = orig_dataFZ)
         rodown, _ = make_single_fit(d['t_odown'],d['y'],yerr,globalvars,localvars,
-                                     plotstr=outdir+'/'+str(ip)+'_tdown',plottitle = d['diode'].radstr())
+                                     plotstr=outdir+'/'+str(ip)+'_tdown',plottitle = '',
+                                     indiv_data = orig_dataFZ)
         
         for k in roup.keys():
             resdict[k+"_oup"]=roup[k]
@@ -221,15 +257,15 @@ def makeData():
     print('saved to',outdir+'/data.pkl')
     
    
-#makeData()
-#exit()
+makeData()
+exit()
 
 #read dump
 
 with open(outdir+'/data.pkl','rb') as f:
     allres=pickle.load(f)
 
-print(allres)        
+#print(allres)        
 varkeys = [k for k in stdvars.keys()] + ['mint']
 #print(allres)
 
@@ -247,6 +283,14 @@ labeldict={
 
 #exit()
 #make plot
+
+chi2ovndof = [r['min_chi2']/r['ndof'] for r in allres]
+
+print('chi2 ov ndof', chi2ovndof, np.min(chi2ovndof), np.mean(chi2ovndof), np.max(chi2ovndof))
+
+print('individual:', [( r['diode'].label_str(), r['min_chi2']/r['ndof']) for r in allres])
+
+
 
 def getYErrs(a,b):
     #a, b, are already nominal subtracted
@@ -289,7 +333,7 @@ for var in varkeys:
         yodown = [r[var+'_odown'] for r in allres if _sel(r,sel)]
     
         
-    
+        
         
         downvar = np.array(y)-np.array(youp)
         upvar = np.array(y)-np.array(yodown)
@@ -336,6 +380,9 @@ for var in varkeys:
     plt.savefig(outdir+'/'+var+'.pdf')
     print('saved',outdir+'/'+var+'.pdf')
     plt.close()
+
+
+
 
 #save for Ron
 ofilename = outdir+'/allpoints.txt'
