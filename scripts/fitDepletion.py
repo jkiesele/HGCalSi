@@ -2,6 +2,8 @@
 
 from argparse import ArgumentParser
 import styles
+
+styles.setstyles(16)
 import os
 import pickle 
 
@@ -117,6 +119,7 @@ plt.title(d.paperlabel() + '\n'+str(t)+' min')
 diodestr = args.inputDir[0:4]
 from diodes import diodes
 cideal = diodes[diodestr].Cideal()
+
 v = getDepletionVoltage(globalpath+args.inputDir+"/"+args.cvfile,
                         min_x=-900,
                         const_cap=const_cap,

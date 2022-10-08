@@ -29,7 +29,7 @@ def fontsize():
 def fontdict():
     return  {'size': g_fontsize}
 
-setstyles()
+#setstyles()
 
 def addModifiedXAxis(xs, func,  label):
     import numpy as np

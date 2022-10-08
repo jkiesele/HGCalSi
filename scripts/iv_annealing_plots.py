@@ -50,10 +50,10 @@ def setAxisIV(ax,ylabel="-$I$ [A]",**legkwargs):
     plt.xlabel("time (60˚C) [min]")
     plt.ylabel(ylabel)
     
-    sax = ax.secondary_xaxis('top', functions=(minat60ToDaysAt21, identity))
-    sax.set_xlabel("time (21˚C) [d]")
-    sax = ax.secondary_xaxis(1.2, functions=(minat60ToDaysAt0, identity))
-    sax.set_xlabel("time (0˚C) [d]")
+    #sax = ax.secondary_xaxis('top', functions=(minat60ToDaysAt21, identity))
+    #sax.set_xlabel("time (21˚C) [d]")
+    #sax = ax.secondary_xaxis(1.2, functions=(minat60ToDaysAt0, identity))
+    #sax.set_xlabel("time (0˚C) [d]")
     if addminus30:
         sax = ax.secondary_xaxis(1.4, functions=(minat60ToMonthsAtm30, identity))
         sax.set_xlabel("time (-30˚C) [months]")
@@ -74,7 +74,7 @@ itimesthicknessylim=[0,scale_y*0.009]
 for U in (-600, -800, "Udep"):
     
     import styles
-    styles.setstyles()
+    styles.setstyles(15)
     
     voltstring = str(U)
     if not hasattr(U, "split"):
@@ -230,8 +230,8 @@ for U in (-600, -800, "Udep"):
                     labelmode='fluence',
                         current_at=U)
     setAxisIV(ax,"Leakage current ("+voltstring+") [µA]")
-    plt.ylim([0,scale_y*2.1e-5])
-    plt.text(.3, scale_y*0.1e-5, "300 µm FZ",fontdict=styles.fontdict())
+    plt.ylim([scale_y*0.2e-5,scale_y*2.1e-5])
+    plt.text(.3, scale_y*0.3e-5, "300 µm FZ",fontdict=styles.fontdict())
     plt.tight_layout()
     plt.savefig(outdir+'300_'+str(U)+'.pdf')
     

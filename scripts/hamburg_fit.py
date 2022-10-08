@@ -257,8 +257,8 @@ def makeData():
     print('saved to',outdir+'/data.pkl')
     
    
-makeData()
-exit()
+#makeData()
+#exit()
 
 #read dump
 

@@ -868,7 +868,6 @@ class DepletionFitter(object):
         print('[',nom,',',up-nom,',',nom-down,']')
         
         if debugplot:
-            import styles
             allx = np.concatenate([[nom*1.1], self.data['x']], axis=0)
             #max_x = np.max([nom])
             #plt.close()
@@ -883,7 +882,7 @@ class DepletionFitter(object):
             plt.xlabel("-U [V]")
             plt.ylabel("$1/C^2 [1/F^2]$")
             plt.ylim([np.min(self.data['y'])/1.1, np.max(self.data['y'])*1.2])
-            
+            plt.tight_layout()
                 
             fig = plt.gcf()
             if plotprefix is not None:
