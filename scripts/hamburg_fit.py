@@ -369,7 +369,7 @@ for var in varkeys:
         #    ax.annotate(txt, (xi,yi))
         
     ax.set_ylabel(labeldict[var])
-    ax.set_xlabel(r'Fluence [$\Phi_{eq} / cm^{-2}$]')
+    ax.set_xlabel(r'Fluence [$N_{eq} / cm^{2}$]')
     ax.set_xscale('log')
     
     
