@@ -201,7 +201,7 @@ class diode(object):
         return self.thickness / (1000. * 10.)
     
     def Cideal(self):
-        eps = 11.9
+        eps = 11.68
         eps0 = 8.85E-14
         return eps0*eps * self.area / self.thickness_cm 
         

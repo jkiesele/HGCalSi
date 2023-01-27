@@ -1,5 +1,11 @@
 #!/usr/bin/env python3
 
+from argparse import ArgumentParser
+
+parser = ArgumentParser('convert recorded ')
+parser.add_argument('-d',action='store_true',help='recreate data (not just plot)')
+args = parser.parse_args()
+
 import os
 
 import jax
@@ -17,6 +23,7 @@ import styles
 styles.setstyles()
 
 from jax import numpy as jnp 
+import tabulate
 
 datadir=os.getenv("DATAOUTPATH")
 outdir=os.getenv("DATAOUTPATH")+'/hamburg_model/'
@@ -127,9 +134,14 @@ def make_single_fit(x,y,yerr,globalvars,localvars,plotstr=None,plottitle=None, i
     merrstt = merrstt*merrst
     corr = cov/merrstt
     
+    
+    
     fvals=np.array(m.values)
     
     resdict = fitfunc.list_to_dict(m.values)  ##vvs.getVarList(True)
+    
+    resdict['var_order'] = [fitfunc.asso_i_to_str[i] for i in range(len(m.values))]
+    resdict['corr'] = corr
     
     resdict['min_chi2'] = min_chi2
     resdict['npar'] = npar
@@ -256,18 +268,10 @@ def makeData():
     
     print('saved to',outdir+'/data.pkl')
     
-   
-#makeData()
-#exit()
+if args.d: 
+    makeData()
+    exit()
 
-#read dump
-
-with open(outdir+'/data.pkl','rb') as f:
-    allres=pickle.load(f)
-
-#print(allres)        
-varkeys = [k for k in stdvars.keys()] + ['mint']
-#print(allres)
 
 labeldict={
     'g_a':r'$g_a$ [$\Phi_{eq}^{-1} cm^{-1}$]',
@@ -280,6 +284,83 @@ labeldict={
     'mint': r'$t(U_{dep,min})$ [min]',
     #'U_{dep}^{min}': r'[V]',
     }
+
+
+labeldict_no_units={
+    'g_a':r'$g_a$',
+    'tau_a': r'$\tau_a$',
+    #'N_C+N_{Eff,0}': r'[$cm^{-3}$]',
+    #'N_C': r'[$cm^{-3}$]',
+    'g_c': r'$g_c$',
+    'g_y': r'$g_y$',
+    'tau_y': r'$\tau_y$',
+    'mint': r'$t(U_{dep,min})$',
+    #'U_{dep}^{min}': r'[V]',
+    }
+
+
+def makeCorrTable(rdict):
+    #select only nominals
+    
+    def format_corr(corr):
+        out=[]
+        for i in range(len(corr)):
+            outi=[]
+            for j in range(len(corr)):
+                outi.append("{:.2f}".format(corr[i][j]))
+                '{p:.{n}f}'
+            out.append(outi) 
+        return out   
+    selected = []
+    for r in rdict:
+        
+        corr = np.array(format_corr(r['corr']))
+        d = {'corr': corr, 'var_order': r['var_order'],
+                          'mat': r['diode'].material_str(), 
+                          'fluence': r['diode'].rad_str()} 
+        
+        labels = [ labeldict_no_units[v] for v in d['var_order'] ]
+        
+        d['tab'] = np.concatenate( [np.expand_dims(labels,axis=0), d['corr']],axis=0)
+        vert_vars = np.concatenate( [np.array([' ']), labels ], axis=0)
+        d['tab'] = np.concatenate( [np.expand_dims(vert_vars,axis=1), d['tab']],axis=1)
+                         
+        selected.append(d )
+    
+    
+    for s in selected:
+        tablestr = '''
+\\begin{table}[]
+\centering
+\caption{\label{tab:corr_}Correlations between fitted parameters for the
+''' + s['mat'] + ' material and a fluence of '+ s['fluence'] +'''.}
+'''
+        tablestr += (tabulate.tabulate(s['tab'], headers='firstrow', tablefmt='latex_raw'))
+        tablestr += '''
+\end{table}'''
+    
+        tablestr = tablestr.replace('lrrrrr','l|rrrrr')
+        tablestr = tablestr.replace('''rr}
+\hline''','''rr}''')
+        tablestr = tablestr.replace('''\hline
+\end{tabular}''','''\end{tabular}''')
+    
+        print(tablestr)
+    
+    
+
+
+#read dump
+
+with open(outdir+'/data.pkl','rb') as f:
+    allres=pickle.load(f)
+
+makeCorrTable(allres)
+
+
+#print(allres)        
+varkeys = [k for k in stdvars.keys()] + ['mint']
+#print(allres)
 
 #exit()
 #make plot
