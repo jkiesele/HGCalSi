@@ -19,10 +19,17 @@ import pickle
 
 defcvfile="*.cv"
 
-parser = ArgumentParser('Alwyas determines in Cs and Cp mode and saves the output to a single file as data frame')
+parser = ArgumentParser('''
+Script to determine the depletion voltage for a frequency scan input file and works almost the same way as fitDepletion.py.
+It takes an input file (*.cf) and fits the depletion voltage (as in fitDepletion.py) 
+ - for each frequency point
+ - for parallel and serial mode (the best choice can also depend on frequency *and* fluence
+The output is saved in the output directory (will be put under the usual processed data output: {dataout}).
+The output format is a pickled pandas dataframe for easy handling afterwards.
+'''.format(dataout=os.getenv("DATAOUTPATH")))
 parser.add_argument('inputFile')
 parser.add_argument('outputDir')
-parser.add_argument('--var', type=float, default=10.)
+parser.add_argument('--var', type=float, default=10., help="variation in percent that is applied to the fit ranges")
 args = parser.parse_args()
 
 def invert(a):
