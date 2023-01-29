@@ -160,7 +160,7 @@ def do_one_fit(singleCVs, capacitance : str , plotfilename : str):
 
     ax.plot(-x, y, '-')
     #plt.yscale('log')
-    plt.title('Single CV (serial) for f = ' + str(f) + ' Hz')
+    plt.title('Single CV for f = ' + str(f) + ' Hz')
     
     fig.canvas.mpl_connect('button_press_event', onclick)
     fig.canvas.mpl_connect('pick_event', onpick)
