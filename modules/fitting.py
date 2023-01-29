@@ -822,7 +822,7 @@ class DepletionFitter(object):
     def _linear(self, x, a, b): 
         return a * x + b
     
-    def _dofit(self, debugplot=False, savedatapath=None, plotprefix=None):
+    def _dofit(self, debugplot=False, savedatapath=None, plotprefix=None, return_all_data=False):
         #
         # assume cuts
         # fit lines, store
@@ -836,6 +836,7 @@ class DepletionFitter(object):
             for scons in cons:
                 x = self.data['x_smooth'][srise]
                 y = self.data['y_smooth'][srise]
+                
                 popt, _ = curve_fit(Linear(), x, y)
                 a, b = popt
                 line = Linear(a=a, b=b)
@@ -891,21 +892,21 @@ class DepletionFitter(object):
             if self.interactive:
                 plt.show()
             
-            
-        if savedatapath is not None:
-            d = {'depletion_nominal':nom,
+        d = {'depletion_nominal':nom,
                  'depletion_up': up,
                  'depletion_down': down,
                  'riselines': riselines,
                  'conslines': conslines,
                  'rangevar': self.extraunc
                  }
-            d.update(self.data)
-            
+        d.update(self.data)   
+         
+        if savedatapath is not None:
             with open(savedatapath, 'wb')  as filehandler:
                 pickle.dump(d, filehandler)
             
-            
+        if return_all_data:
+            return d
                 
         return nom,up,down
             
@@ -953,10 +954,10 @@ class DepletionFitter(object):
         
         return funcs
             
-    def getDepletionVoltage(self,debugplot=False, withunc=False, savedatapath=None, plotprefix= None):
-        if withunc:
-            return self._dofit(debugplot=debugplot,savedatapath=savedatapath, plotprefix=plotprefix)
-        return self._dofit(debugplot=debugplot,savedatapath=savedatapath,plotprefix=plotprefix)[0]
+    def getDepletionVoltage(self,debugplot=False, withunc=False, savedatapath=None, plotprefix= None, return_all_data=False):
+        if withunc or return_all_data:
+            return self._dofit(debugplot=debugplot,savedatapath=savedatapath, plotprefix=plotprefix,return_all_data=return_all_data)
+        return self._dofit(debugplot=debugplot,savedatapath=savedatapath,plotprefix=plotprefix,return_all_data=False)[0]
     
     def _smoothen(self):
         x = self.data['x']

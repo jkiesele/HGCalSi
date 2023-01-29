@@ -137,35 +137,76 @@ def find_ranges(plot_to_show):
 
 def do_one_fit(singleCVs, capacitance : str , plotfilename : str):
     
+    
+    fig, ax = plt.subplots()
+    
+    def onpick(event):
+        thisline = event.artist
+        xdata = thisline.get_xdata()
+        ydata = thisline.get_ydata()
+        ind = event.ind
+        print ('onpick points:', zip(xdata[ind], ydata[ind]))
+        
+    data = []    
+    def onclick(event):
+        if event.dblclick:
+            if event.button == 1:
+                print('picked',event.xdata, event.ydata)
+                data.append(-event.xdata)
+    
     x, y = singleCVs['V_detector'], 1 / (singleCVs[capacitance] ** 2)
-    plt.plot(-x, y, '-')
+    
+
+
+    ax.plot(-x, y, '-')
     #plt.yscale('log')
     plt.title('Single CV (serial) for f = ' + str(f) + ' Hz')
     
-    high_end, high_start, low_end, low_start, const_cap = find_ranges(plt)
+    fig.canvas.mpl_connect('button_press_event', onclick)
+    fig.canvas.mpl_connect('pick_event', onpick)
     
-    df = DepletionFitter(x=np.array(x), 
-                         y=np.array(y), 
-                 const_cap=const_cap,
-                 rising=1, constant=8,
-                 debugfile=plotfilename+'_debug',
-                 low_start  =low_start,
-                        low_end = low_end,
-                        high_start=high_start,
-                        high_end =high_end,
-                        varcut=variation,
-                        interactive=True)
+    plt.show()
     
-    v = df.getDepletionVoltage(debugplot=True,plotprefix=plotfilename, return_all_data=True)
-    out = { k:v[k] for k in ['depletion_nominal','depletion_up','depletion_down']}
-    out.update({
-        'high_end':high_end, 
-        'high_start':high_start, 
-        'low_end':low_end, 
-        'low_start':low_start, 
-        'const_cap':const_cap})
-    print(out)
-    return out
+    try:
+        if len(data) != 4:
+            high_end, high_start, low_end, low_start, const_cap = find_ranges(plt)
+        else:
+            high_end, high_start, low_end, low_start, const_cap = *data, None
+    
+        print(high_end, high_start, low_end, low_start, const_cap)
+        df = DepletionFitter(x=np.array(x), 
+                             y=np.array(y), 
+                     const_cap=const_cap,
+                     rising=1, constant=8,
+                     debugfile=plotfilename+'_debug',
+                     low_start  =low_start,
+                            low_end = low_end,
+                            high_start=high_start,
+                            high_end =high_end,
+                            varcut=variation,
+                            interactive=True)
+        
+        v = df.getDepletionVoltage(debugplot=True,plotprefix=plotfilename, return_all_data=True)
+        
+        ret = input('are you happy? (y(Y)/n(N)')
+        if not (ret == "y" or ret == "Y"):
+            return None
+        
+        out = { k:v[k] for k in ['depletion_nominal','depletion_up','depletion_down']}
+        out.update({
+            'high_end':high_end, 
+            'high_start':high_start, 
+            'low_end':low_end, 
+            'low_start':low_start, 
+            'const_cap':const_cap})
+        print(out)
+        
+        return out
+    
+    except Exception as e:
+        print(e)
+        print('an error occured, try again or quit with ctrl-c')
+        return None
     
 outdict = {
     'depletion_nominal': [],
@@ -183,6 +224,8 @@ outdict = {
     'mode': []
     }
 
+
+    
 for f in freq:
     
     singleCV = select_CV_from_freq_scan(meas_df, f)
@@ -190,7 +233,9 @@ for f in freq:
     singleCVs = convert_cp_to_cs(singleCV, f)
     #print(singleCVs['Serial_Capacitance'])
     
-    v = do_one_fit(singleCVs, 'Serial_Capacitance',  outpath + '/cvfit_cs_'+str(f)+'.pdf')
+    v = None
+    while v is None:
+        v = do_one_fit(singleCVs, 'Serial_Capacitance',  outpath + '/cvfit_cs_'+str(f)+'.pdf')
     
     for k in v.keys():
         outdict[k].append(v[k])
@@ -198,17 +243,17 @@ for f in freq:
     outdict['frequency'].append(f)
     
     
-    v = do_one_fit(singleCVs, 'Capacitance',  outpath + '/cvfit_cp_'+str(f)+'.pdf')
+    v = None
+    while v is None:
+        v = do_one_fit(singleCVs, 'Capacitance',  outpath + '/cvfit_cp_'+str(f)+'.pdf')
     
     for k in v.keys():
         outdict[k].append(v[k])
     outdict['mode'].append("cp")
     outdict['frequency'].append(f)
     
-    
-    
-df = pd.DataFrame.from_dict(outdict)
-df.to_pickle(outpath+'depl_dataframe.pkl')
+    df = pd.DataFrame.from_dict(outdict)
+    df.to_pickle(outpath+'depl_dataframe.pkl')
 
 print(df,'saved data in',outpath+'depl_dataframe.pkl')
 
