@@ -17,8 +17,6 @@ styles.setstyles(16)
 import os
 import pickle 
 
-defcvfile="*.cv"
-
 parser = ArgumentParser('''
 Script to determine the depletion voltage for a frequency scan input file and works almost the same way as fitDepletion.py.
 It takes an input file (*.cf) and fits the depletion voltage (as in fitDepletion.py) 
@@ -159,12 +157,28 @@ def do_one_fit(singleCVs, capacitance : str , plotfilename : str):
                         interactive=True)
     
     v = df.getDepletionVoltage(debugplot=True,plotprefix=plotfilename, return_all_data=True)
-    return v['depletion_nominal'], v['depletion_up'], v['depletion_down']
+    out = { k:v[k] for k in ['depletion_nominal','depletion_up','depletion_down']}
+    out.update({
+        'high_end':high_end, 
+        'high_start':high_start, 
+        'low_end':low_end, 
+        'low_start':low_start, 
+        'const_cap':const_cap})
+    print(out)
+    return out
     
 outdict = {
     'depletion_nominal': [],
     'depletion_up': [],
     'depletion_down': [],
+    
+    
+    'high_end': [],
+    'high_start': [],
+    'low_end': [],
+    'low_start': [],
+    'const_cap': [],
+    
     'frequency': [],
     'mode': []
     }
@@ -174,28 +188,28 @@ for f in freq:
     singleCV = select_CV_from_freq_scan(meas_df, f)
     print('CV data for f = ', f, ' Hz')
     singleCVs = convert_cp_to_cs(singleCV, f)
-    print(singleCVs['Serial_Capacitance'])
+    #print(singleCVs['Serial_Capacitance'])
     
-    n,u,d = do_one_fit(singleCVs, 'Serial_Capacitance',  outpath + '/cvfit_cs_'+str(f)+'.pdf')
+    v = do_one_fit(singleCVs, 'Serial_Capacitance',  outpath + '/cvfit_cs_'+str(f)+'.pdf')
     
-    outdict['depletion_nominal'].append(n)
-    outdict['depletion_up'].append(u)
-    outdict['depletion_down'].append(d)
-    outdict['frequency'].append(f)
+    for k in v.keys():
+        outdict[k].append(v[k])
     outdict['mode'].append("cs")
-    
-    n,u,d = do_one_fit(singleCVs, 'Capacitance',  outpath + '/cvfit_cp_'+str(f)+'.pdf')
-    
-    outdict['depletion_nominal'].append(n)
-    outdict['depletion_up'].append(u)
-    outdict['depletion_down'].append(d)
     outdict['frequency'].append(f)
-    outdict['mode'].append("cp")
     
-    break
+    
+    v = do_one_fit(singleCVs, 'Capacitance',  outpath + '/cvfit_cp_'+str(f)+'.pdf')
+    
+    for k in v.keys():
+        outdict[k].append(v[k])
+    outdict['mode'].append("cp")
+    outdict['frequency'].append(f)
+    
+    
     
 df = pd.DataFrame.from_dict(outdict)
-
 df.to_pickle(outpath+'depl_dataframe.pkl')
+
+print(df,'saved data in',outpath+'depl_dataframe.pkl')
 
 
